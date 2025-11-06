@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS 雲端同步筆記｜KAO-YU-HSIANG</title>
+
+  <!-- ✅ 共用樣式 -->
+  <link href="/static/css/style.css" rel="stylesheet">
+
+  <!-- ✅ Bootstrap 套件 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</head>
+
+<body>
+  <!-- ✅ 共用 Header -->
+  <div id="header"></div>
+
+  <main id="main" class="container">
+
+    <div class="text-center mb-5">
+      <h1>🌥️ AWS S3 雲端同步筆記</h1>
+      <p class="text-muted">
+        本頁記錄 KAO-YU-HSIANG 在本地 VS Code 開發與 AWS S3 同步測試的流程與狀態。
+      </p>
+    </div>
+
+    <div class="section-title">🪜 一、目前架構狀態</div>
+    <ul>
+      <li>本地資料夾：<code>C:\Users\User\Desktop\kao-aws-s3-site</code></li>
+      <li>S3 Bucket：<code>kao-web-static</code></li>
+      <li>區域（Region）：<b>ap-northeast-1（東京）</b></li>
+      <li>同步方向：<code>Local → S3</code> （單向上傳）</li>
+    </ul>
+
+    <div class="section-title">🧰 二、同步指令</div>
+    <pre><code>aws s3 sync "C:\Users\User\Desktop\kao-aws-s3-site" s3://kao-web-static</code></pre>
+
+    <p>此指令會將本地端所有更新檔案同步至 S3，若不加 <code>--delete</code> 參數，不會刪除舊檔。</p>
+
+    <div class="section-title">🧠 三、驗證流程</div>
+    <ol>
+      <li>在 VS Code 中修改或新增檔案（如本頁 <code>KAO_AWS.html</code>）。</li>
+      <li>於 PowerShell 執行同步指令。</li>
+      <li>前往下方網址檢視是否更新。</li>
+    </ol>
+
+    <div class="section-title">🌐 四、S3 網站連結</div>
+    <p>
+      <a href="http://kao-web-static.s3-website-ap-northeast-1.amazonaws.com/zh/KAO/KAO_AWS.html" target="_blank">
+        http://kao-web-static.s3-website-ap-northeast-1.amazonaws.com/zh/KAO/KAO_AWS.html
+      </a>
+    </p>
+
+    <div class="section-title">✅ 五、測試狀態</div>
+    <p>2025-11-01 測試完成：可由 VS Code 修改本地檔案 → 以 <code>aws s3 sync</code> 上傳 → 網頁即時更新。</p>
+
+  </main>
+
+  <!-- ✅ 共用 Footer -->
+  <div id="footer"></div>
+
+  <!-- ✅ 共用 JS -->
+  <script src="/static/js/layout.js"></script>
+</body>
+</html>

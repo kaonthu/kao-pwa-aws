@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>API Gateway 筆記｜KAO-YU-HSIANG</title>
+
+  <!-- 共用樣式 -->
+  <link href="/static/css/style.css" rel="stylesheet">
+
+  <!-- 外部套件 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+  <div id="header"></div>
+
+  <main id="main" class="container">
+    <div class="text-center mb-5">
+      <h1>API Gateway 筆記</h1>
+      <p class="text-muted">
+        本頁整理 API Gateway 的資源結構、階段（Stage）、端點格式、CORS 與測試方式。<br>
+      </p>
+    </div>
+
+    <!-- 一、資源結構與端點 -->
+    <div class="section-title">🧩 一、資源結構與端點（Resources & Stages）</div>
+
+    <p>
+    以下為 API Gateway <code>hello-lambda-new-world</code> 的實際結構與運行連結：<br>
+    ✅ <a href="https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/hello" target="_blank">
+    https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/hello</a>
+    </p>
+
+    <ul>
+    <li><code>/</code>（根路徑）</li>
+    <li><code>/hello</code>：
+        <ul>
+        <li>方法：<code>GET</code>、<code>OPTIONS</code></li>
+        <li>整合：Lambda（HelloWorldFunction）</li>
+        <li>Stage：<code>Prod</code></li>
+        </ul>
+    </li>
+    </ul>
+
+    <p class="mt-3">
+    API Gateway 的端點（Endpoint）結構如下：
+    </p>
+
+    <pre><code>https://{api-id}.execute-api.{region}.amazonaws.com/{stage-name}/{path}</code></pre>
+
+    <ul>
+    <li><b>API ID：</b>自動生成，例如 <code>4b5cqz0xpd</code></li>
+    <li><b>Region：</b>部署區域，例如 <code>ap-northeast-1</code>（東京）</li>
+    <li><b>Stage：</b>代表部署環境，例如 <code>Prod</code>、<code>Stage</code></li>
+    <li><b>Path：</b>實際路由，例如 <code>/hello</code></li>
+    </ul>
+
+    <div class="sub-block" 
+        style="background: rgba(255,255,255,0.06); 
+                border-left: 4px solid #00b4d8; 
+                border-radius: 6px; 
+                padding: 14px 18px;">
+    <b style="color:#ffcc66;">📘 Stage 與 Prod 的差別：</b>
+    <ul style="margin-top:8px; color:#e6e6e6; line-height:1.7;">
+        <li><b style="color:#ffffff;">Stage</b>：開發與測試階段（Staging），可隨時更新與除錯。</li>
+        <li><b style="color:#ffffff;">Prod</b>：正式上線階段（Production），對外提供穩定服務。</li>
+        <li>你可在同一個 API Gateway 中建立多個 Stage，對應不同部署版本。</li>
+        <li><span style="color:#ff9999;">⚠️ 若未重新「部署（Deploy）」至 Stage，外部端點不會更新。</span></li>
+    </ul>
+    </div>
+
+    <p class="mt-3">
+    因此，目前的正式端點 <code>/Prod/hello</code> 即代表該 Lambda 已成功部署於「Prod 階段」，可直接被前端（S3 網站）或 <code>curl</code> 測試存取。
+    </p>
+
+    <!-- 二、部署與更新 -->
+    <div class="section-title">☁️ 二、部署與更新（Deploy）</div>
+    <p>使用 SAM 進行部署：</p>
+    <pre><code>sam build
+sam deploy --guided</code></pre>
+    <p>若僅在 API Gateway 主控台改動資源/方法，需 <b>部署 API</b> 到對應 Stage 才會生效。</p>
+
+    <!-- 三、CORS -->
+    <div class="section-title">🔐 三、CORS（跨來源資源共用）</div>
+    <p>
+      若前端（S3 網站）使用 <code>fetch()</code> 呼叫 API，需確保回應包含 CORS Header。<br>
+      注意：<code>SAM &quot;Cors&quot;</code> 在自定義 <code>RestApiId</code> 時可能不生效，建議於 Lambda 直接回傳：
+    </p>
+    <div class="code-wrap">
+      <div class="code-title">Lambda 回傳（含 CORS）</div>
+      <pre class="pretty-code"><code class="language-json">return {
+  "statusCode": 200,
+  "headers": {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+  },
+  "body": json.dumps({"message": "hello world"})
+}</code></pre>
+    </div>
+
+    <!-- 四、測試方法 -->
+    <div class="section-title">🧪 四、測試方式</div>
+    <p><b>curl</b>：</p>
+    <pre><code>curl -i "https://{api-id}.execute-api.ap-northeast-1.amazonaws.com/Prod/hello"</code></pre>
+
+    <p><b>瀏覽器 / fetch()</b>：</p>
+    <pre><code>fetch("https://{api-id}.execute-api.ap-northeast-1.amazonaws.com/Prod/hello")
+  .then(r =&gt; r.json())
+  .then(console.log)</code></pre>
+
+    <!-- 五、自訂網域（可選） -->
+    <div class="section-title">🌐 五、自訂網域（選配）</div>
+    <p>
+      如需 <b>HTTPS + 自訂網域 + 快取</b>，建議使用 <b>CloudFront + ACM</b> 代理到 API Gateway；<br>
+      提供乾淨網址（例如 <code>https://api.kao.life/hello</code>）並可控快取與安全性。
+    </p>
+
+    <p class="text-muted mt-4">📅 更新日期：2025-11-06</p>
+  </main>
+
+  <div id="footer"></div>
+  <script src="/static/js/layout.js"></script>
+</body>
+</html>

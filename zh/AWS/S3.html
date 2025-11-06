@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌥️ AWS S3 雲端同步筆記｜KAO-YU-HSIANG</title>
+
+  <!-- ✅ 共用樣式 -->
+  <link href="/static/css/style.css" rel="stylesheet">
+
+  <!-- ✅ Bootstrap 套件 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+  <div id="header"></div>
+
+  <main id="main" class="container">
+
+    <div class="text-center mb-5">
+      <h1>🌥️ AWS S3 雲端同步筆記</h1>
+      <p class="text-muted">
+        本頁整理 AWS S3 靜態網站的架構、網址差異與本地端開發流程，  
+        並記錄如何透過 VS Code 與 AWS CLI 完成同步與測試。
+      </p>
+    </div>
+
+    <!-- 🧩 一、S3 架構說明 -->
+    <div class="section-title">🧩 一、S3 架構說明</div>
+
+    <p>AWS S3 本質上是「雲端儲存空間」，而非一般伺服器。  
+    當我們開啟「靜態網站託管」功能後，它會自動提供兩種不同的訪問端點：</p>
+
+    <ul>
+      <li><b>① Website Endpoint（網站入口）</b></li>
+      <p>URL：
+          <a href="http://kao-pwa-aws.s3-website-ap-northeast-1.amazonaws.com" target="_blank">
+            http://kao-pwa-aws.s3-website-ap-northeast-1.amazonaws.com
+        </a><br>
+        ▪ 採用「靜態網站託管」模式，支援 <code>index.html</code>、<code>error.html</code> 自動導向。<br>
+        ▪ 僅支援 <b>HTTP</b>，⚠️ 無法直接使用 HTTPS。<br>
+        ▪ 適合完整網站導向（如部落格、作品集）。
+      </p>
+
+      <li><b>② Object Endpoint（物件入口）</b></li>
+      <p>URL：
+          <a href="https://kao-pwa-aws.s3.ap-northeast-1.amazonaws.com/index.html" target="_blank">
+            https://kao-pwa-aws.s3.ap-northeast-1.amazonaws.com/index.html
+        </a><br>
+        ▪ 使用 S3 REST API 模式，僅能回傳單一物件。<br>
+        ▪ 支援 <b>HTTPS</b> 安全連線。<br>
+        ▪ 不支援自動導向或網站結構。<br>
+        ▪ 適合單檔下載、資源引用。
+      </p>
+    </ul>
+
+    <p><b>📌 結論：</b>  
+    Website Endpoint 適合整站導向，Object Endpoint 適合單檔下載。  
+    若想同時具備「HTTPS + 網站導向」，應再搭配 <b>CloudFront</b> 進行轉發。</p>
+
+
+    <!-- 🧠 二、本地端開發與預覽 -->
+    <div class="section-title">🧠 二、本地端開發與預覽</div>
+
+    <p>
+      雖然 VS Code 可以直接透過 AWS 套件修改並同步到 S3，  
+      但頻繁更新不利於操作，也可能增加上傳流量成本。  
+      因此建議先在本地端完成網頁修改與測試後，再行上傳。
+    </p>
+
+    <p>在本地端操作的推薦流程如下：</p>
+
+    <pre><code>conda activate aws_flask_env
+ cd C:\Users\User\Desktop\kao-pwa-aws
+ http://localhost:8080/index.html</code></pre>
+
+    <p>
+      如此即可在本地環境預覽整個網站結構，確保畫面與連結皆正確，  
+      接著再使用同步指令上傳至雲端即可。
+    </p>
+
+
+    <!-- 🧰 三、同步指令 -->
+    <div class="section-title">🧰 三、同步指令</div>
+
+    <p>
+      同步方式可透過 AWS CLI 完成，將本地資料夾內容上傳至指定的 S3 Bucket。
+    </p>
+
+    <pre><code>aws s3 sync "C:\Users\User\Desktop\kao-pwa-aws" s3://kao-pwa-aws</code></pre>
+
+    <p>若需清理雲端多餘檔案，可加入：</p>
+    <pre><code>aws s3 sync "C:\Users\User\Desktop\kao-pwa-aws" s3://kao-pwa-aws --delete</code></pre>
+
+    <p>若只想預覽同步差異，可使用 dryrun 模式：</p>
+    <pre><code>aws s3 sync "C:\Users\User\Desktop\kao-pwa-aws" s3://kao-pwa-aws --dryrun</code></pre>
+
+    <p>
+      同步完成後，即可透過前述 Website Endpoint 或 Object Endpoint 進行測試。
+    </p>
+
+    <p class="text-muted mt-4">📅 更新日期：2025-11-06</p>
+  </main>
+
+  <div id="footer"></div>
+  <script src="/static/js/layout.js"></script>
+</body>
+</html>

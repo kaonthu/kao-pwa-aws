@@ -1,0 +1,346 @@
+/* === 全域樣式 === */
+body {
+  font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  background: linear-gradient(135deg, #0d1b2a, #1b263b, #415a77);
+  color: #f0f0f0;
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* === Header === */
+#header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(13, 27, 42, 0.95);
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.3);
+  z-index: 999;
+}
+
+.header-container {
+  max-width: 95%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 80px;
+}
+
+.logo img {
+  width: 45px;
+  height: 45px;
+}
+
+.sitename {
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+/* ✅ 移除 LOGO 文字底線 */
+.logo a,
+.logo {
+  text-decoration: none !important;
+}
+
+/* === 導覽列 === */
+#navmenu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+#navmenu a {
+  color: #f8f9fa !important;
+  text-decoration: none;
+  font-weight: 500;
+  line-height: 80px;
+  transition: color 0.3s ease;
+}
+
+#navmenu a:hover {
+  color: #00b4d8 !important;
+}
+
+/* === Dropdown === */
+#navmenu ul li {
+  position: relative;
+}
+
+#navmenu ul li ul {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: none;
+  background: rgba(13, 27, 42, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  min-width: 200px;
+  padding: 6px 0;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* hover 顯示 */
+#navmenu ul li:hover > ul,
+#navmenu ul li ul:hover {
+  display: block;
+}
+
+#navmenu ul li.dropdown::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 15px;
+}
+
+/* === Dropdown 項目 === */
+#navmenu ul li ul li {
+  margin: 0;
+  line-height: 1;
+}
+
+#navmenu ul li ul a {
+  display: block;
+  padding: 20px 36px;    /* ↑ 每項增加高度 */
+  color: #e0e8f0 !important;
+  line-height: 1.4;      /* ↑ 讓字更鬆一點 */
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* 🌟 簡潔 hover 效果（無光影） */
+#navmenu ul li ul a {
+  display: block;
+  padding: 20px 36px;
+  color: #e0e8f0 !important;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
+  position: relative;
+  background: transparent;
+}
+
+#navmenu ul li ul a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #00b4d8 !important;
+  transform: translateX(2px);
+}
+
+#navmenu ul li ul a:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #00b4d8 !important;
+  transform: translateX(2px);
+}
+
+/* === Get Started 按鈕 === */
+.btn-getstarted {
+  background-color: #00b4d8;
+  border-radius: 30px;
+  padding: 8px 20px;
+  color: #fff !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-getstarted:hover {
+  background-color: #0077b6;
+  transform: translateY(-2px);
+}
+
+/* === Main === */
+#main {
+  margin-top: 120px;
+}
+
+.login-box {
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 15px;
+  padding: 40px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.login-box h2 {
+  color: #00b4d8;
+  font-weight: bold;
+}
+
+.form-label {
+  color: #fff;
+}
+
+.form-control {
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+}
+
+footer {
+  background: rgba(0, 0, 0, 0.3);
+  color: #aaa;
+  font-size: 0.9rem;
+  text-align: center;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  padding: 10px 0;
+}
+
+/* 修正第二層選單顯示問題 */
+#navmenu ul li ul {
+  overflow: visible;            /* 允許展開 */
+}
+
+#navmenu ul li ul li ul {
+  top: 0;
+  left: 100%;
+  display: none;
+  position: absolute;
+  background: rgba(20, 30, 45, 0.97);
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
+  min-width: 200px;
+  border-radius: 6px;
+  z-index: 2000;                /* 層級提高 */
+}
+
+#navmenu ul li ul li:hover > ul {
+  display: block;               /* 滑入顯示第二層 */
+}
+
+/* 防止 hover 消失 */
+#navmenu ul li.dropdown::after,
+#navmenu ul li ul li.dropdown::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 20px;
+  height: 100%;
+}
+
+/* === 🧱 筆記頁通用樣式（整合入主 style.css） === */
+
+/* 全站統一深色背景與亮色文字 */
+body {
+  background-color: #0d1b2a;
+  color: #e6e6e6;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", "PingFang TC", sans-serif;
+}
+
+/* 標題文字 */
+h1, h2, h3, h4 {
+  color: #ffffff;
+}
+
+/* 區塊標題 */
+.section-title {
+  color: #ffcc66;
+  font-weight: bold;
+  font-size: 1.3rem;
+  margin-top: 40px;
+}
+
+/* === 🧩 程式碼區塊排版優化（針對多層結構內容） === */
+pre {
+  background: #1a2a3a;      /* 維持原本深藍底 */
+  color: #d2faff;           /* 保持亮青字 */
+  border-radius: 6px;
+  padding: 16px 20px;       /* 增加內距，文字不會貼邊 */
+  line-height: 1.8;         /* 拉開行距，縮排更清楚 */
+  white-space: pre-wrap;    /* 長行自動換行（避免水平捲軸太長） */
+  word-break: break-word;   /* 保證不會溢出容器 */
+  overflow-x: auto;         /* 若真的太長仍可橫向捲動 */
+}
+
+/* 讓行內 code（非 pre）保持緊湊 */
+code {
+  background: #1a2a3a;
+  color: #d2faff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.95rem;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+/* 連結 */
+a {
+  color: #4db8ff;
+  text-decoration: none;
+}
+a:hover {
+  color: #66ffff;
+  text-shadow: 0 0 6px rgba(102,255,255,0.3);
+}
+
+/* 段落、清單、一般文字亮度 */
+p, li, ol, ul, div, span {
+  color: #e6e6e6;
+  line-height: 1.8;
+  font-size: 1rem;
+}
+
+/* 加強重點文字 */
+b, strong {
+  color: #ffffff;
+}
+
+/* 修正 Bootstrap 的灰色文字 */
+.text-muted {
+  color: #bfbfbf !important;
+}
+
+
+/* === 🧪 API 測試控制台專用樣式 === */
+
+/* 測試頁按鈕樣式 */
+button {
+  background-color: #00b4d8;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0077b6;
+  transform: translateY(-2px);
+}
+
+/* 結果區塊（API 回傳顯示） */
+.result-block {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 4px solid #00b4d8;
+  border-radius: 6px;
+  padding: 14px 18px;
+  margin-top: 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #e6e6e6;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+/* 程式碼塊與結果區塊分開明顯 */
+pre {
+  margin-bottom: 1rem;
+}
+
+.result-block pre {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+}
