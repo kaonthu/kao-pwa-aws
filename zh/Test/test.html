@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>API 測試控制台｜KAO-YU-HSIANG</title>
 
-  
   <!-- 共用樣式 -->
   <link href="/static/css/style.css" rel="stylesheet">
 
@@ -15,6 +14,19 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+  <style>
+    /* 🟩 統一所有按鈕樣式 */
+    button.btn {
+      font-size: 1.05rem;
+      background-color: #198754 !important;
+      color: white !important;
+      border: none !important;
+    }
+    button.btn:hover {
+      background-color: #157347 !important;
+      color: #fff !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -23,70 +35,79 @@
   <main id="main" class="container">
     <div class="text-center mb-5">
       <h1>🧪 API 測試控制台</h1>
-      <p class="text-muted">快速測試 Lambda API 與公共 API 的回傳結果。</p>
+      <p class="text-muted">快速測試 Lambda、EC2、CloudFront API 的回傳結果。</p>
     </div>
 
-    <!-- Lambda 測試 -->
+    <!-- ⚙️ 一、Lambda API 測試 -->
     <div class="section-title">⚙️ 一、Lambda API 測試</div>
-
-    <p>目標端點：</p>
     <pre><code>
-    https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/hello
-    https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/test
+https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/hello
+https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/test
     </code></pre>
 
-    <!-- 兩個 Lambda 測試按鈕 -->
     <div class="d-flex flex-wrap gap-2">
-      <button id="btnHello" class="btn btn-primary">
-        <i class="fa-solid fa-cloud-arrow-down"></i> 呼叫 /hello
+      <button id="btnHello" class="btn">
+        🚀 呼叫 /hello
       </button>
-      <button id="btnTest" class="btn btn-success">
-        <i class="fa-solid fa-vial"></i> 呼叫 /test
+      <button id="btnTest" class="btn">
+        🚀 呼叫 /test
       </button>
     </div>
 
-    <!-- 結果顯示 -->
     <div id="helloResult" class="result-block mt-3">🕓 尚未測試 /hello</div>
     <div id="testResult" class="result-block mt-3">🕓 尚未測試 /test</div>
 
-    <!-- 公共 API 測試 -->
+    <!-- 🌍 二、公共 API 測試 -->
     <div class="section-title">🌍 二、公共 API 測試</div>
-    <p>示範端點（JSONPlaceholder 測試 API）：</p>
     <pre><code>https://jsonplaceholder.typicode.com/todos/1</code></pre>
 
-    <button id="btnPublic"><i class="fa-solid fa-globe"></i> 呼叫公共 API</button>
+    <button id="btnPublic" class="btn">🚀 呼叫公共 API</button>
     <div id="publicResult" class="result-block mt-3">🕓 尚未測試</div>
 
-    <!-- ⚡ EC2 Flask 測試 -->
+    <!-- ⚡ 三、EC2 Flask 測試 -->
     <div class="section-title">⚡ 三、EC2 Flask API 測試</div>
-    <p>目前部署的 Flask API 端點：</p>
     <pre><code>http://18.176.60.86:5000/</code></pre>
 
-    <button id="btnEC2" class="btn btn-warning text-dark">
-      <i class="fa-solid fa-server"></i> 呼叫 EC2 Flask API
-    </button>
+    <button id="btnEC2" class="btn">🚀 呼叫 EC2 Flask API</button>
     <div id="ec2Result" class="result-block mt-3">🕓 尚未測試 EC2 Flask</div>
 
     <!-- 🧩 四、EC2 Gunicorn + Nginx 測試 -->
     <div class="section-title">🧩 四、EC2 Gunicorn + Nginx 測試</div>
-    <p>目前正式部署的 API 端點（Nginx 反向代理至 Gunicorn）：</p>
-    <pre><code>http://18.176.60.86/
-    http://18.176.60.86/status</code></pre>
+    <pre><code>
+http://18.176.60.86/
+http://18.176.60.86/status
+http://18.176.60.86/api/
+http://18.176.60.86/api/status
+    </code></pre>
 
     <div class="d-flex flex-wrap gap-2">
-      <button id="btnGunicornRoot" class="btn btn-info text-white">
-        <i class="fa-solid fa-plug"></i> 呼叫 /
-      </button>
-      <button id="btnGunicornStatus" class="btn btn-secondary">
-        <i class="fa-solid fa-circle-info"></i> 呼叫 /status
-      </button>
+      <button id="btnGunicornRoot" class="btn">🚀 呼叫 /</button>
+      <button id="btnGunicornStatus" class="btn">🚀 呼叫 /status</button>
+      <button id="btnGunicornAPI" class="btn">🚀 呼叫 /api/</button>
+      <button id="btnGunicornAPIStatus" class="btn">🚀 呼叫 /api/status</button>
     </div>
 
     <div id="gunicornRootResult" class="result-block mt-3">🕓 尚未測試 /</div>
     <div id="gunicornStatusResult" class="result-block mt-3">🕓 尚未測試 /status</div>
+    <div id="gunicornAPIResult" class="result-block mt-3">🕓 尚未測試 /api/</div>
+    <div id="gunicornAPIStatusResult" class="result-block mt-3">🕓 尚未測試 /api/status</div>
 
-    <!-- 更新日期 -->
-    <p class="text-muted mt-5">📅 更新日期：2025-11-06</p>
+    <!-- ☁️ 五、CloudFront HTTPS Proxy 測試 -->
+    <div class="section-title">☁️ 五、CloudFront HTTPS Proxy 測試</div>
+    <pre><code>
+https://d2kenp4ywj2ej.cloudfront.net/api/
+https://d2kenp4ywj2ej.cloudfront.net/api/status
+    </code></pre>
+
+    <div class="d-flex flex-wrap gap-2">
+      <button id="btnCloudfrontAPI" class="btn">🚀 呼叫 CloudFront /api/</button>
+      <button id="btnCloudfrontStatus" class="btn">🚀 呼叫 CloudFront /api/status</button>
+    </div>
+
+    <div id="cloudfrontAPIResult" class="result-block mt-3">🕓 尚未測試 CloudFront /api/</div>
+    <div id="cloudfrontStatusResult" class="result-block mt-3">🕓 尚未測試 CloudFront /api/status</div>
+
+    <p class="text-muted mt-5">📅 更新日期：2025-11-08</p>
   </main>
 
   <div id="footer"></div>
@@ -123,6 +144,5 @@
     document.getElementById("btnPublic").addEventListener("click", () => callAPI(publicUrl, "publicResult"));
     document.getElementById("btnEC2").addEventListener("click", () => callAPI(ec2Url, "ec2Result"));
   </script>
-
 </body>
 </html>
