@@ -27,19 +27,92 @@
       </p>
     </div>
 
-    <!-- 目的 -->
-    <div class="section-title">🎯 目的</div>
+    <!-- 🧩 一、環境狀態 -->
+    <div class="section-title">🧩 一、你目前的環境狀態</div>
     <p>
-      在本地端模擬 Lambda + API Gateway 的運作，完成開發與測試後再部署到雲端。
+      本專案位於：<code>C:\Users\User\Documents\aws-lambda-test\hello-lambda-new</code><br>
+      由 <b>SAM（Serverless Application Model）</b> 建立，用於本地開發與測試 Lambda + API Gateway，
+      之後再以 <code>sam deploy</code> 部署到 AWS 雲端。
     </p>
 
+    <pre><code>1. aws sts get-caller-identity
+{
+  "UserId": "AIDAYNSOPZXQP2JJKOWYB",
+  "Account": "578911456736",
+  "Arn": "arn:aws:iam::578911456736:user/vscode-user"
+}
+2. 區域：ap-northeast-1</code></pre>
+
+    <!-- ☁️ 二、雲端連結 -->
+    <div class="section-title">☁️ 二、為什麼它能「連結到 AWS 雲端」</div>
+    <p>
+      SAM 部署時會透過 <b>CloudFormation Stack</b> 建立整套雲端資源：
+      <ul>
+        <li>Lambda Function</li>
+        <li>API Gateway（含 /hello 資源與 Stage）</li>
+        <li>IAM Role</li>
+        <li>CloudWatch Logs</li>
+      </ul>
+      流程如下：
+    </p>
+    <ol>
+      <li>執行 <code>sam deploy --guided</code>，指定 Stack 名稱（hello-lambda-new-world）。</li>
+      <li>SAM 將程式打包後上傳至臨時 S3 Bucket。</li>
+      <li>CloudFormation 根據 <code>template.yaml</code> 建立上述資源。</li>
+      <li>部署成功後回傳雲端 API URL（例：<code>https://xxxx.execute-api.ap-northeast-1.amazonaws.com/Prod/hello</code>）。</li>
+    </ol>
+    <p>
+      因此此專案已與雲端 Stack 綁定；只要本地修改程式後執行
+      <code>sam build</code> → <code>sam deploy</code>，
+      即可自動更新雲端版本。
+    </p>
+
+    <!-- 💻 三、本地開發 -->
+    <div class="section-title">💻 三、回到本地開發：如何確認目前 API</div>
+    <ul>
+      <li>① 開啟 <code>template.yaml</code> 查看已定義的 API。</li>
+      <li>② 檢視 Lambda 原始碼（<code>hello_world/app.py</code>）。</li>
+      <li>③ 本地測試指令：</li>
+    </ul>
+    <pre><code>cd C:\Users\User\Documents\aws-lambda-test\hello-lambda-new\hello-lambda-new-world
+sam build
+sam local start-api --skip-pull-image
+# 測試：http://127.0.0.1:3000/hello</code></pre>
+
+    <!-- 四、本地測試環境 -->
+    <div class="section-title">四、本地測試環境：5000 vs 3000</div>
+    <p>
+      5000 埠為 Flask 本地伺服器，用於一般網頁或 API 開發；  
+      3000 埠由 SAM 模擬 Lambda + API Gateway，行為與雲端部署一致。  
+      若目標是部署至 AWS Lambda，建議以 3000 為主要測試環境。
+    </p>
+
+    <!-- 五、後端框架 -->
+    <div class="section-title">五、後端框架說明</div>
+    <p>
+      目前此專案為「純 Python Lambda（無框架）」；不是 Flask 或 FastAPI。
+    </p>
+    <table class="table table-bordered" style="font-size:0.95rem;">
+      <thead class="table-light"><tr><th>項目</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>執行入口</td><td><code>Handler: app.lambda_handler</code> → Lambda 原生執行點</td></tr>
+        <tr><td>回傳格式</td><td><code>statusCode</code>、<code>headers</code>、<code>body</code> → 標準 API Gateway Proxy</td></tr>
+        <tr><td>無框架引用</td><td>程式中無 <code>from flask import Flask</code> 或 <code>from fastapi import FastAPI</code></td></tr>
+        <tr><td>模板來源</td><td><code>sam init</code> 產生的「Hello World Example (Python)」</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 原本章節：目的 -->
+    <div class="section-title">🎯 六、目的</div>
+    <p>在本地端模擬 Lambda + API Gateway 的運作，完成開發與測試後再部署到雲端。</p>
+
     <!-- 開發目標 -->
-    <div class="section-title">🧩 一、開發目標</div>
+    <div class="section-title">🧩 七、開發目標</div>
     <p>建立一個簡單 API（/hello），回傳：</p>
     <pre><code>{"message": "hello world"}</code></pre>
 
     <!-- 基本概念 -->
-    <div class="section-title">📘 二、基本概念</div>
+    <div class="section-title">📘 八、基本概念</div>
     <ul>
       <li><b>Lambda：</b> 事件觸發的運行環境，免維運主機。</li>
       <li><b>API Gateway：</b> 對外提供 HTTP 入口，整合 Lambda。</li>
@@ -47,8 +120,8 @@
     </ul>
 
     <!-- 本地開發 -->
-    <div class="section-title">🧱 三、本地開發流程（SAM）</div>
-    <pre><code>sam init             # 建立範例專案（選 Hello World / Python3.12）
+    <div class="section-title">🧱 九、本地開發流程（SAM）</div>
+    <pre><code>sam init
 cd hello-lambda-new-world
 sam build
 sam local start-api --skip-pull-image
@@ -56,24 +129,24 @@ sam local start-api --skip-pull-image
     <p>預期回傳：<code>{"message": "hello world"}</code></p>
 
     <!-- 雲端部署 -->
-    <div class="section-title">☁️ 四、雲端部署流程</div>
+    <div class="section-title">☁️ 十、雲端部署流程</div>
     <pre><code>sam deploy --guided</code></pre>
     <ul>
       <li>建立/更新：Lambda Function、API Gateway、IAM Role、CloudFormation Stack。</li>
-      <li>完成訊息（範例）：<code>Successfully created/updated stack - hello-lambda-new-world in ap-northeast-1</code></li>
-      <li>端點（範例）：<code>https://xq1nikjgl5.execute-api.ap-northeast-1.amazonaws.com/Prod/hello</code></li>
+      <li>完成訊息：<code>Successfully created/updated stack - hello-lambda-new-world in ap-northeast-1</code></li>
+      <li>端點範例：<code>https://xq1nikjgl5.execute-api.ap-northeast-1.amazonaws.com/Prod/hello</code></li>
     </ul>
 
     <!-- 常見問題 -->
-    <div class="section-title">🚨 五、常見問題</div>
+    <div class="section-title">🚨 十一、常見問題</div>
     <ul>
-      <li><b>Missing Authentication Token</b>：路徑錯誤 → 確認 <code>/hello</code>、Stage 與方法。</li>
-      <li><b>Binary validation failed</b>：Runtime 不符 → 調整 <code>template.yaml</code> 為 <code>python3.12</code>。</li>
-      <li><b>AccessDenied</b>：權限不足 → 檢查 AWS CLI 設定檔與 IAM Policy。</li>
+      <li><b>Missing Authentication Token：</b> 路徑錯誤 → 確認 <code>/hello</code>、Stage 與方法。</li>
+      <li><b>Binary validation failed：</b> Runtime 不符 → 調整 <code>template.yaml</code> 為 <code>python3.12</code>。</li>
+      <li><b>AccessDenied：</b> 權限不足 → 檢查 AWS CLI 設定檔與 IAM Policy。</li>
     </ul>
 
     <!-- 重點摘要 -->
-    <div class="section-title">🔧 六、重點摘要</div>
+    <div class="section-title">🔧 十二、重點摘要</div>
     <ul>
       <li><code>sam build</code>：建構依賴</li>
       <li><code>sam local start-api</code>：本地啟動 API 模擬</li>
@@ -82,7 +155,7 @@ sam local start-api --skip-pull-image
     </ul>
 
     <!-- CORS -->
-    <div class="section-title">🌐 七、CORS 問題與解決（2025/11/05）</div>
+    <div class="section-title">🌐 十三、CORS 問題與解決（2025/11/05）</div>
     <p>前端（S3 網站）以 <code>fetch()</code> 呼叫時需回應 CORS Header（SAM 的 <code>Cors</code> 在自定義 <code>RestApiId</code> 時可能無效）：</p>
     <div class="code-wrap">
       <div class="code-title">Lambda 回傳（含 CORS）</div>
@@ -98,7 +171,7 @@ sam local start-api --skip-pull-image
     </div>
 
     <!-- 附錄：主控台對照 -->
-    <div class="section-title">📎 八、主控台對照（目前狀態摘要）</div>
+    <div class="section-title">📎 十四、主控台對照（目前狀態摘要）</div>
     <ul>
       <li>Lambda 函數：
         <ul>
@@ -107,10 +180,10 @@ sam local start-api --skip-pull-image
           <li><code>flask-app-FlaskFunction</code>（Python 3.10）</li>
         </ul>
       </li>
-      <li>API Gateway：<code>hello-lambda-new-world</code>（資源：<code>/</code>、<code>/hello</code>；方法：<code>GET</code>/<code>OPTIONS</code>）</li>
+      <li>API Gateway：<code>hello-lambda-new-world</code>（資源：<code>/hello</code>、<code>/test</code>；方法：<code>GET</code>/<code>OPTIONS</code>）</li>
     </ul>
 
-    <p class="text-muted mt-4">📅 更新日期：2025-11-06</p>
+    <p class="text-muted mt-4">📅 更新日期：2025-11-07</p>
   </main>
 
   <div id="footer"></div>

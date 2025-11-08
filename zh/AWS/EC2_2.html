@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌩️ AWS EC2 × Gunicorn × Nginx 部署筆記｜KAO-YU-HSIANG</title>
+
+  <!-- 共用樣式 -->
+  <link href="/static/css/style.css" rel="stylesheet">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+  <div id="header"></div>
+
+  <main id="main" class="container">
+    <div class="text-center mb-5">
+      <h1>🌩️ AWS EC2 × Gunicorn × Nginx 部署筆記</h1>
+      <p class="text-muted">
+        本頁記錄 EC2 上 Flask API 的正式部署流程，  
+        從虛擬環境建立、Gunicorn 啟動、Nginx 反向代理，到安全群組與最終服務測試。
+      </p>
+    </div>
+
+    <!-- 一、建立新資料夾與虛擬環境 -->
+    <div class="section-title">🧩 一、建立新資料夾與虛擬環境</div>
+    <pre><code>cd ~
+mkdir kao_flask_gunicorn && cd kao_flask_gunicorn
+python3 -m venv venv && source venv/bin/activate
+pip install flask flask-cors gunicorn
+</code></pre>
+    <p>此環境獨立於原本 <code>kao_flask_api</code>，作為正式部署版本。</p>
+
+    <!-- 二、Flask 應用（app_gunicorn.py） -->
+    <div class="section-title">🧠 二、Flask 應用程式（app_gunicorn.py）</div>
+    <pre><code>from flask import Flask, jsonify
+from flask_cors import CORS
+import datetime
+
+app = Flask(__name__)
+CORS(app)
+
+@app.route("/")
+def index():
+    return jsonify({
+        "message": "Hello from EC2 Flask (Gunicorn version)!",
+        "server_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+
+@app.route("/status")
+def status():
+    return jsonify({"status": "running", "version": "gunicorn-demo-v1.0"})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5001)
+</code></pre>
+    <p>此版本使用 <code>port=5001</code>，避免與原本 5000 埠衝突。</p>
+
+    <!-- 三、使用 Gunicorn 啟動 Flask -->
+    <div class="section-title">⚙️ 三、以 Gunicorn 啟動 Flask 應用</div>
+    <pre><code># 啟動 Gunicorn（2 個 worker，綁定 127.0.0.1:5001）
+gunicorn -w 2 -b 127.0.0.1:5001 app_gunicorn:app
+
+# 背景執行（登出後仍持續運行）
+nohup gunicorn -w 2 -b 127.0.0.1:5001 app_gunicorn:app > gunicorn.log 2>&1 &
+
+# 檢查與測試
+ps aux | grep gunicorn
+curl http://127.0.0.1:5001/
+</code></pre>
+
+    <details>
+      <summary>🔹 補充：Gunicorn 指令參數說明</summary>
+      <ul>
+        <li><b>-w 2：</b>代表建立兩個 <code>worker process</code>，能同時處理多個請求。</li>
+        <li><b>-b 127.0.0.1:5001：</b>僅允許本機連線，外部請求將透過 Nginx 代理。</li>
+        <li><b>app_gunicorn:app：</b>指定檔案名稱與 Flask 物件（檔名:物件）。</li>
+      </ul>
+      <p>這行指令的意義：</p>
+      <blockquote>「請 Gunicorn 建立兩個 worker 進程，綁定在 127.0.0.1:5001，並載入 <b>app_gunicorn.py</b> 中的 <b>app</b> 物件。」</blockquote>
+    </details>
+
+    <!-- 四、安裝與啟動 Nginx -->
+    <div class="section-title">🌍 四、安裝與啟動 Nginx（反向代理）</div>
+    <pre><code>sudo dnf install nginx -y
+sudo systemctl enable nginx
+sudo systemctl start nginx
+</code></pre>
+    <p>Nginx 負責接收外部請求 (Port 80)，再轉發給內部的 Gunicorn (127.0.0.1:5001)。</p>
+
+    <!-- 五、Nginx 代理設定 -->
+    <div class="section-title">🧱 五、Nginx 代理設定檔</div>
+    <pre><code>sudo nano /etc/nginx/conf.d/flask.conf
+</code></pre>
+    <pre><code>server {
+    listen 80;
+    server_name 18.176.60.86;
+
+    location / {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+</code></pre>
+    <p>這樣外部 <code>http://18.176.60.86</code> 的請求，就會自動轉送至 Gunicorn。</p>
+
+    <!-- 六、安全群組設定 -->
+    <div class="section-title">🔒 六、安全群組設定（AWS Console）</div>
+    <p>於 <b>Security Groups → launch-wizard-1 → Inbound rules</b> 新增以下規則：</p>
+    <table class="table table-sm">
+      <thead><tr><th>Type</th><th>Protocol</th><th>Port</th><th>Source</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Custom TCP</td><td>TCP</td><td>5001</td><td>0.0.0.0/0</td><td>Flask-Gunicorn-Test</td></tr>
+        <tr><td>HTTP</td><td>TCP</td><td>80</td><td>0.0.0.0/0</td><td>Nginx Web Access</td></tr>
+      </tbody>
+    </table>
+    <p>開放 80 埠後，外部即可直接訪問 <code>http://18.176.60.86/</code> 無需指定 port。</p>
+
+    <!-- 七、整體流程與架構理解 -->
+    <div class="section-title">🧩 七、整體流程理解與比喻</div>
+    <p>
+      可將這個架構想像為：
+    </p>
+    <ul>
+      <li><b>Flask API</b> 是工程師（負責邏輯與計算）。</li>
+      <li><b>Gunicorn</b> 是主管（負責分配請求給多位工程師）。</li>
+      <li><b>Nginx</b> 是櫃檯（負責接待客戶並分派給主管）。</li>
+    </ul>
+    <p>
+      客戶（使用者）不會直接接觸 Flask，而是先進到 Nginx，  
+      由 Nginx 轉給 Gunicorn，最後才由 Flask 處理並回傳結果。
+    </p>
+
+    <!-- 八、最終測試 -->
+    <div class="section-title">✅ 八、最終測試結果</div>
+    <pre><code>http://18.176.60.86/
+http://18.176.60.86/status
+</code></pre>
+    <p>
+      成功回傳 JSON 後，代表整個部署流程完成。  
+      不需再輸入 <code>:5001</code>，即可透過 HTTP 正常呼叫 API。
+    </p>
+
+    <!-- 九、目前 EC2 運行狀態 -->
+    <div class="section-title">🧭 九、目前 EC2 運行狀態</div>
+    <p>
+      以下為目前這台 EC2（<code>t2.micro</code>）主機的實際運行服務，  
+      經由 <code>sudo lsof -i -P -n | grep LISTEN</code> 與 <code>systemctl</code> 驗證：
+    </p>
+
+    <table class="table table-sm">
+      <thead><tr><th>服務</th><th>Port</th><th>管理方式</th><th>對外開放</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>SSH (sshd)</td><td>22</td><td>systemd</td><td>✅</td><td>正常（登入主機）</td></tr>
+        <tr><td>Flask 開發版</td><td>5000</td><td>nohup</td><td>✅</td><td>運行中（舊版本）</td></tr>
+        <tr><td>Gunicorn</td><td>5001</td><td>nohup</td><td>❌（本機內部）</td><td>運行中（由 Nginx 代理）</td></tr>
+        <tr><td>Nginx</td><td>80</td><td>systemd</td><td>✅</td><td>運行中（對外服務）</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      目前整體運作合理且架構完整。<br>
+      外部請求經由 <b>Nginx (80)</b> → 內部 <b>Gunicorn (5001)</b> → <b>Flask 應用</b>。  
+      若不再使用舊版 Flask，可停止 <code>python app.py</code> 以節省資源：
+    </p>
+    <pre><code>pkill -f app.py</code></pre>
+
+    <p class="text-muted">Gunicorn 尚未註冊為 systemd 服務，因此重啟 EC2 後需手動啟動（未來可改為自動）。</p>
+
+    <!-- 十、效能比較：EC2 vs Raspberry Pi 5 -->
+    <div class="section-title">⚖️ 十、效能比較：EC2 t2.micro vs Raspberry Pi 5</div>
+    <p>
+      為了解目前 EC2 的性能定位，以下為 t2.micro（Intel Xeon E5-2686 v4）  
+      與 Raspberry Pi 5（ARM Cortex-A76 ×4）之間的簡要比較：
+    </p>
+
+    <table class="table table-sm">
+      <thead><tr><th>項目</th><th>EC2 t2.micro</th><th>Raspberry Pi 5</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>CPU</td><td>1 vCPU（Xeon E5-2686 v4）</td><td>4 核 Cortex-A76 @ 2.4GHz</td><td>Pi 5 約快 3～5 倍</td></tr>
+        <tr><td>記憶體</td><td>1 GB DDR3</td><td>4～8 GB LPDDR4X</td><td>Pi 5 明顯優勢</td></tr>
+        <tr><td>儲存</td><td>8 GB EBS（網路磁碟）</td><td>microSD / NVMe</td><td>EBS 延遲較高，但可快照備份</td></tr>
+        <tr><td>網路頻寬</td><td>高速雲端網路（100 Mbps↑）</td><td>Gigabit LAN / Wi-Fi</td><td>EC2 穩定與延遲較低</td></tr>
+        <tr><td>成本</td><td>約 $8～$10/月</td><td>一次性約 NT$5,000～6,000</td><td>EC2 適合短期測試，Pi 5 適合長期部署</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      整體而言，<b>Raspberry Pi 5</b> 的原始效能更高（CPU 與記憶體皆優於 t2.micro），  
+      而 <b>EC2</b> 的優勢在於雲端穩定性、外網連線與可隨時擴展。  
+      若用於雲端 API、整合 S3 或 Lambda，EC2 更具彈性；  
+      若用於本地開發與實體感測整合，Pi 5 則更經濟實用。
+    </p>
+
+    <p class="text-muted mt-4">📅 更新日期：2025-11-07</p>
+  </main>
+
+  <div id="footer"></div>
+  <script src="/static/js/layout.js"></script>
+</body>
+</html>

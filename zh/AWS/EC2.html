@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌩️ AWS EC2 雲端主機筆記｜KAO-YU-HSIANG</title>
+
+  <!-- 共用樣式 -->
+  <link href="/static/css/style.css" rel="stylesheet">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+  <div id="header"></div>
+
+  <main id="main" class="container">
+    <div class="text-center mb-5">
+      <h1>🌩️ AWS EC2 雲端主機筆記</h1>
+      <p class="text-muted">
+        本頁簡記 EC2 主機的啟動流程、虛擬環境設定、Flask API 啟動、背景常駐與時區修正。
+      </p>
+    </div>
+
+    <!-- 一、EC2 基本資訊 -->
+    <div class="section-title">🧩 一、這台 EC2 的基本資訊</div>
+    <ul>
+      <li>Instance ID：<code>i-0bbc46ca9d34bb64e</code></li>
+      <li>Public IP：<code>18.176.60.86</code>　/　Private IP：<code>172.31.42.6</code></li>
+      <li>Region：<code>ap-northeast-1（東京）</code>　AMI：<code>Amazon Linux 2023</code>　Type：<code>t2.micro</code></li>
+      <li>Kernel：<code>6.1.156-177.286.amzn2023.x86_64</code></li>
+      <li>CPU：<code>Intel(R) Xeon(R) E5-2686 v4 @ 2.30GHz</code></li>
+      <li>Disk：8 GB（可用約 6.2 GB）</li>
+    </ul>
+
+    <!-- 二、金鑰與 SSH -->
+    <div class="section-title">🔑 二、金鑰與 SSH 登入</div>
+    <pre><code>icacls "C:\Users\User\Documents\kao-ec2-key.pem" /inheritance:r
+icacls "C:\Users\User\Documents\kao-ec2-key.pem" /grant:r "$($env:USERNAME):(R)"
+ssh -i "C:\Users\User\Documents\kao-ec2-key.pem" ec2-user@18.176.60.86</code></pre>
+
+    <!-- 三、Flask 專案與虛擬環境 -->
+    <div class="section-title">🧰 三、Flask 專案與虛擬環境</div>
+    <pre><code>mkdir ~/kao_flask_api && cd ~/kao_flask_api
+sudo dnf install python3 python3-pip -y
+python3 -m venv venv && source venv/bin/activate
+pip install flask flask-cors
+</code></pre>
+    <p>這個虛擬環境 <code>venv</code> 僅屬於此資料夾，與系統全域 Python (<code>/usr/bin/python3</code>) 無衝突。</p>
+
+    <!-- 四、app.py 範例（含 CORS） -->
+    <div class="section-title">🧠 四、app.py 範例（含 CORS）</div>
+    <pre><code>from flask import Flask
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)  # 啟用跨網域請求
+
+@app.route("/")
+def hello():
+    return "Hello from EC2 Flask Server with CORS enabled!"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+</code></pre>
+    <p>此版本已可讓 S3 網頁跨網域呼叫 API（跨網域 CORS 問題解決）。</p>
+
+    <!-- 五、Security Group 開放 5000 -->
+    <div class="section-title">🌍 五、安全群組開放 5000 埠</div>
+    <p>於 AWS 主控台的 <b>Security Groups → launch-wizard-1 → Inbound rules</b> 新增規則：</p>
+    <table class="table table-sm">
+      <thead><tr><th>Type</th><th>Protocol</th><th>Port</th><th>Source</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Custom TCP</td><td>TCP</td><td>5000</td><td>0.0.0.0/0</td><td>Flask-API-Test</td></tr>
+      </tbody>
+    </table>
+    <p>開發階段全開放無妨，正式上線時建議限制來源。</p>
+
+    <!-- 六、背景執行與 Log -->
+    <div class="section-title">⚙️ 六、背景執行與 Log 管理</div>
+    <pre><code>cd ~/kao_flask_api
+source venv/bin/activate
+nohup python app.py > flask.log 2>&1 &
+ps aux | grep app.py     # 檢查是否在背景執行
+pkill -f app.py          # 停止服務
+</code></pre>
+    <p>使用 <code>nohup</code> 可讓服務在登出後仍持續運行。Log 會寫入 <code>flask.log</code>。</p>
+    <details>
+      <summary>🔹 補充：Log 備份指令說明</summary>
+      <pre><code>mv -f flask.log flask.log.bak 2>/dev/null || true</code></pre>
+      <ul>
+        <li>將舊的 <code>flask.log</code> 改名為 <code>flask.log.bak</code>。</li>
+        <li>若檔案不存在則忽略錯誤（不會中斷後續流程）。</li>
+        <li>常用於重啟服務前，確保新 Log 乾淨。</li>
+      </ul>
+    </details>
+
+    <!-- 七、時區設定與 Log 時間修正 -->
+    <div class="section-title">🕓 七、時區設定與 Log 時間修正</div>
+    <pre><code>timedatectl                     # 檢查目前時區
+sudo timedatectl set-timezone Asia/Taipei
+date                            # 驗證顯示台灣時間 (CST, +0800)
+pkill -f app.py                 # 停掉舊服務
+export TZ=Asia/Taipei           # 顯式指定時區
+nohup python app.py > flask.log 2>&1 &
+</code></pre>
+    <p>EC2 預設使用 UTC，比台灣慢 8 小時；修改後需重啟 Flask 才會生效。</p>
+
+    <p class="text-muted mt-4">📅 更新日期：2025-11-07</p>
+  </main>
+
+  <div id="footer"></div>
+  <script src="/static/js/layout.js"></script>
+</body>
+</html>

@@ -102,6 +102,57 @@
       同步完成後，即可透過前述 Website Endpoint 或 Object Endpoint 進行測試。
     </p>
 
+    <!-- ✅ 四、部署與版本管理（GitHub → S3） -->
+    <div class="section-title">✅ 四、部署與版本管理（GitHub → S3）</div>
+
+    <p>
+      建議先將整個 <code>kao-pwa-aws</code> 專案上傳到 GitHub 做版本備份，<br>
+      之後再由本地使用 <code>aws s3 sync</code> 覆蓋部署到 S3（正式上線環境）。
+    </p>
+
+    <p>第一次建立 GitHub Repository 可用：</p>
+    <pre><code>cd C:\Users\User\Desktop\kao-pwa-aws
+    git init
+    git add .
+    git commit -m "Initial commit - local static site for AWS PWA"
+    git branch -M main
+    git remote add origin https://github.com/kaonthu/kao-pwa-aws.git
+    git push -u origin main
+    </code></pre>
+
+    <p>日常更新（推到 GitHub）：</p>
+    <pre><code>git add .
+    git commit -m "Update site content"
+    git push
+    </code></pre>
+
+    <p>⚡ 部署到 S3（目標 Bucket：<b>kao-pwa-aws</b>）</p>
+    <pre><code>:: 先預演（不動到雲端）
+    aws s3 sync "C:\Users\User\Desktop\kao-pwa-aws" s3://kao-pwa-aws --delete --exclude ".git/*" --exclude ".github/*" --dryrun
+
+    :: 正式覆蓋部署（移除 --dryrun）
+    aws s3 sync "C:\Users\User\Desktop\kao-pwa-aws" s3://kao-pwa-aws --delete --exclude ".git/*" --exclude ".github/*"
+    </code></pre>
+
+    <p>驗證連結：</p>
+    <ul>
+      <li>Website Endpoint（HTTP）：<br>
+        <a href="http://kao-pwa-aws.s3-website-ap-northeast-1.amazonaws.com" target="_blank">
+          http://kao-pwa-aws.s3-website-ap-northeast-1.amazonaws.com
+        </a>
+      </li>
+      <li>Object Endpoint（HTTPS；單檔）：<br>
+        <a href="https://kao-pwa-aws.s3.ap-northeast-1.amazonaws.com/index.html" target="_blank">
+          https://kao-pwa-aws.s3.ap-northeast-1.amazonaws.com/index.html
+        </a>
+      </li>
+    </ul>
+
+    <p class="text-muted">
+      流程口訣：<b>① git commit → ② git push → ③ aws s3 sync</b>
+    </p>
+
+
     <p class="text-muted mt-4">📅 更新日期：2025-11-06</p>
   </main>
 

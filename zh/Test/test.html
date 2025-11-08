@@ -28,11 +28,26 @@
 
     <!-- Lambda 測試 -->
     <div class="section-title">⚙️ 一、Lambda API 測試</div>
-    <p>目標端點：</p>
-    <pre><code>https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/hello</code></pre>
 
-    <button id="btnLambda"><i class="fa-solid fa-cloud-arrow-down"></i> 呼叫 Lambda API</button>
-    <div id="lambdaResult" class="result-block mt-3">🕓 尚未測試</div>
+    <p>目標端點：</p>
+    <pre><code>
+    https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/hello
+    https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/test
+    </code></pre>
+
+    <!-- 兩個 Lambda 測試按鈕 -->
+    <div class="d-flex flex-wrap gap-2">
+      <button id="btnHello" class="btn btn-primary">
+        <i class="fa-solid fa-cloud-arrow-down"></i> 呼叫 /hello
+      </button>
+      <button id="btnTest" class="btn btn-success">
+        <i class="fa-solid fa-vial"></i> 呼叫 /test
+      </button>
+    </div>
+
+    <!-- 結果顯示 -->
+    <div id="helloResult" class="result-block mt-3">🕓 尚未測試 /hello</div>
+    <div id="testResult" class="result-block mt-3">🕓 尚未測試 /test</div>
 
     <!-- 公共 API 測試 -->
     <div class="section-title">🌍 二、公共 API 測試</div>
@@ -42,16 +57,48 @@
     <button id="btnPublic"><i class="fa-solid fa-globe"></i> 呼叫公共 API</button>
     <div id="publicResult" class="result-block mt-3">🕓 尚未測試</div>
 
+    <!-- ⚡ EC2 Flask 測試 -->
+    <div class="section-title">⚡ 三、EC2 Flask API 測試</div>
+    <p>目前部署的 Flask API 端點：</p>
+    <pre><code>http://18.176.60.86:5000/</code></pre>
+
+    <button id="btnEC2" class="btn btn-warning text-dark">
+      <i class="fa-solid fa-server"></i> 呼叫 EC2 Flask API
+    </button>
+    <div id="ec2Result" class="result-block mt-3">🕓 尚未測試 EC2 Flask</div>
+
+    <!-- 🧩 四、EC2 Gunicorn + Nginx 測試 -->
+    <div class="section-title">🧩 四、EC2 Gunicorn + Nginx 測試</div>
+    <p>目前正式部署的 API 端點（Nginx 反向代理至 Gunicorn）：</p>
+    <pre><code>http://18.176.60.86/
+    http://18.176.60.86/status</code></pre>
+
+    <div class="d-flex flex-wrap gap-2">
+      <button id="btnGunicornRoot" class="btn btn-info text-white">
+        <i class="fa-solid fa-plug"></i> 呼叫 /
+      </button>
+      <button id="btnGunicornStatus" class="btn btn-secondary">
+        <i class="fa-solid fa-circle-info"></i> 呼叫 /status
+      </button>
+    </div>
+
+    <div id="gunicornRootResult" class="result-block mt-3">🕓 尚未測試 /</div>
+    <div id="gunicornStatusResult" class="result-block mt-3">🕓 尚未測試 /status</div>
+
     <!-- 更新日期 -->
     <p class="text-muted mt-5">📅 更新日期：2025-11-06</p>
   </main>
 
   <div id="footer"></div>
   <script src="/static/js/layout.js"></script>
+  <script src="/static/js/api_gunicorn.js"></script>
 
   <script>
-    const lambdaUrl = "https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/hello";
-    const publicUrl = "https://jsonplaceholder.typicode.com/todos/1";
+    const apiBase = "https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod";
+    const lambdaHello = `${apiBase}/hello`;
+    const lambdaTest  = `${apiBase}/test`;
+    const publicUrl   = "https://jsonplaceholder.typicode.com/todos/1";
+    const ec2Url      = "http://18.176.60.86:5000/";
 
     async function callAPI(url, targetId) {
       const box = document.getElementById(targetId);
@@ -70,8 +117,12 @@
       }
     }
 
-    document.getElementById("btnLambda").addEventListener("click", () => callAPI(lambdaUrl, "lambdaResult"));
+    // 綁定按鈕事件
+    document.getElementById("btnHello").addEventListener("click", () => callAPI(lambdaHello, "helloResult"));
+    document.getElementById("btnTest").addEventListener("click", () => callAPI(lambdaTest, "testResult"));
     document.getElementById("btnPublic").addEventListener("click", () => callAPI(publicUrl, "publicResult"));
+    document.getElementById("btnEC2").addEventListener("click", () => callAPI(ec2Url, "ec2Result"));
   </script>
+
 </body>
 </html>
