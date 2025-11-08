@@ -112,37 +112,8 @@ https://d2kenp4ywj2ej.cloudfront.net/api/status
 
   <div id="footer"></div>
   <script src="/static/js/layout.js"></script>
+  <script src="/static/js/api_basic.js"></script>
   <script src="/static/js/api_gunicorn.js"></script>
 
-  <script>
-    const apiBase = "https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod";
-    const lambdaHello = `${apiBase}/hello`;
-    const lambdaTest  = `${apiBase}/test`;
-    const publicUrl   = "https://jsonplaceholder.typicode.com/todos/1";
-    const ec2Url      = "http://18.176.60.86:5000/";
-
-    async function callAPI(url, targetId) {
-      const box = document.getElementById(targetId);
-      box.textContent = `🚀 正在呼叫：${url}`;
-      try {
-        const res = await fetch(url, { mode: "cors" });
-        const text = await res.text();
-        try {
-          const json = JSON.parse(text);
-          box.textContent = JSON.stringify(json, null, 2);
-        } catch {
-          box.textContent = text;
-        }
-      } catch (err) {
-        box.textContent = "❌ 發生錯誤：" + err;
-      }
-    }
-
-    // 綁定按鈕事件
-    document.getElementById("btnHello").addEventListener("click", () => callAPI(lambdaHello, "helloResult"));
-    document.getElementById("btnTest").addEventListener("click", () => callAPI(lambdaTest, "testResult"));
-    document.getElementById("btnPublic").addEventListener("click", () => callAPI(publicUrl, "publicResult"));
-    document.getElementById("btnEC2").addEventListener("click", () => callAPI(ec2Url, "ec2Result"));
-  </script>
 </body>
 </html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌩️ AWS CloudFront 全域快取與 HTTPS 代理筆記｜KAO-YU-HSIANG</title>
+
+  <!-- 共用樣式 -->
+  <link href="/static/css/style.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+  <div id="header"></div>
+
+  <main id="main" class="container">
+    <div class="text-center mb-5">
+      <h1>🌩️ AWS CloudFront 全域快取與 HTTPS 代理筆記</h1>
+      <p class="text-muted">
+        本頁記錄 CloudFront 在整體架構中的角色與設計目的，  
+        包含 S3、EC2、API Gateway 的整合方式與 HTTPS 憑證設定流程。
+      </p>
+    </div>
+
+    <!-- 🧩 一、CloudFront 角色定位與用途 -->
+    <div class="section-title">🧩 一、CloudFront 角色定位與用途</div>
+    <p>
+      說明 CloudFront 在 AWS 生態系中的定位：全球 CDN、HTTPS 代理、憑證整合、快取與流量分發。  
+      比較 S3 網站直接託管 vs 經 CloudFront 的差異。
+    </p>
+
+    <!-- ☁️ 二、CloudFront 與其他服務的關聯 -->
+    <div class="section-title">☁️ 二、CloudFront 與其他 AWS 服務整合關係</div>
+    <ul>
+      <li>S3：靜態網站 → 透過 CloudFront 提供 HTTPS 與全球快取</li>
+      <li>EC2：Flask / Nginx → 透過 CloudFront 作為外部 HTTPS 門口</li>
+      <li>API Gateway / Lambda：透過 CloudFront 實現自訂網域與快取策略</li>
+    </ul>
+
+    <!-- 🔐 三、HTTPS 與 ACM 憑證機制 -->
+    <div class="section-title">🔐 三、HTTPS 與 ACM 憑證機制</div>
+    <p>
+      說明 CloudFront 如何透過 ACM (AWS Certificate Manager) 提供免費 HTTPS 憑證，  
+      以及「終止加密 (TLS termination)」的概念。  
+      包含自訂網域（CNAME + ACM 驗證）與自動續期機制。
+    </p>
+
+    <!-- ⚙️ 四、建立 CloudFront Distribution 流程 -->
+    <div class="section-title">⚙️ 四、建立 CloudFront Distribution 流程</div>
+    <ol>
+      <li>建立 Distribution（指定 S3 或 EC2 為 Origin）</li>
+      <li>設定 Viewer Protocol Policy（Redirect HTTP → HTTPS）</li>
+      <li>關閉快取（API 模式）或開啟快取（靜態資源模式）</li>
+      <li>套用 ACM 憑證、建立別名網域（Optional）</li>
+    </ol>
+
+    <!-- 🌍 五、S3 網站 × CloudFront 結構 -->
+    <div class="section-title">🌍 五、S3 網站 × CloudFront 結構</div>
+    <p>說明如何將 S3 Website Endpoint 經由 CloudFront 提供 HTTPS，包含典型架構圖。</p>
+    <pre><code>S3 (HTTP Website Endpoint)
+   ↑
+CloudFront (HTTPS + 憑證)
+   ↑
+使用者（HTTPS 瀏覽）
+</code></pre>
+
+    <!-- 🧱 六、EC2 Flask × CloudFront HTTPS 架構 -->
+    <div class="section-title">🧱 六、EC2 Flask × CloudFront HTTPS 架構</div>
+    <p>
+      說明如何讓 EC2 上的 Nginx / Flask 提供 HTTP 服務，  
+      再由 CloudFront 對外提供 HTTPS 入口與 ACM 憑證。  
+      包含 Origin Protocol Policy、Security Group、CORS 設定要點。
+    </p>
+
+    <!-- 🚦 七、API Gateway × CloudFront 快取與自訂網域 -->
+    <div class="section-title">🚦 七、API Gateway × CloudFront 快取與自訂網域</div>
+    <p>
+      說明如何將 CloudFront 套用於 API Gateway，  
+      提供更乾淨的 HTTPS URL（例如 https://api.kao.life/hello）。  
+      討論快取、延遲、CORS 與安全性策略。
+    </p>
+
+    <!-- ⚡ 八、CloudFront 部署與測試指令 -->
+    <div class="section-title">⚡ 八、CloudFront 部署與測試指令</div>
+    <pre><code>aws cloudfront create-distribution --origin-domain-name kao-pwa-aws.s3.amazonaws.com
+aws cloudfront list-distributions
+curl -I https://dxxxxx.cloudfront.net/
+</code></pre>
+    <p>示範如何以 AWS CLI 檢查 Distribution 狀態與 HTTPS 響應。</p>
+
+    <!-- 🧠 九、常見問題與排查 -->
+    <div class="section-title">🧠 九、常見問題與排查</div>
+    <ul>
+      <li>InvalidViewerCertificate → 憑證未綁 ACM 或憑證區域錯誤（需 us-east-1）</li>
+      <li>403 AccessDenied → S3 未開啟「允許 CloudFront 讀取」權限（需 OAC）</li>
+      <li>Cache Miss / Hit 行為觀察與清除快取指令</li>
+    </ul>
+
+    <!-- 📘 十、架構小結 -->
+    <div class="section-title">📘 十、架構小結</div>
+    <p>
+      CloudFront 是整個 AWS 架構的「安全入口與全球加速層」，  
+      負責提供 HTTPS、CDN、ACM 憑證與內容分發。  
+      不論後端是 S3、EC2 或 API Gateway，都可經由 CloudFront 統一進出。  
+    </p>
+
+    <!-- 🧭 十一、目前 CloudFront 分佈運作狀態（2025/11/08） -->
+    <div class="section-title">🧭 十一、目前 CloudFront 分佈運作狀態（2025/11/08）</div>
+
+    <p>
+    以下為目前已建立並運作中的 CloudFront Distribution（代號 <code>E27AU0ZDIPO8AD</code>）實際配置摘要，  
+    由 <b>kaonthu</b> 帳戶部署，用於串接 S3 靜態網站與 EC2 Flask API。  
+    </p>
+
+    <table class="table table-sm">
+    <thead>
+        <tr><th>項目</th><th>內容</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><b>分佈名稱（Name）</b></td><td>kao-pwa-aws-cdn</td></tr>
+        <tr><td><b>分佈網域名稱（Domain）</b></td><td><code>d2kenp4ywj2ej.cloudfront.net</code></td></tr>
+        <tr><td><b>ARN</b></td><td><code>arn:aws:cloudfront::578911456736:distribution/E27AU0ZDIPO8AD</code></td></tr>
+        <tr><td><b>建立狀態</b></td><td>✅ 啟用中（上次修改：2025/11/08 08:23 UTC）</td></tr>
+        <tr><td><b>效能模式</b></td><td>使用全部節點（最佳效能 / Standard Tier）</td></tr>
+        <tr><td><b>HTTP 版本支援</b></td><td>HTTP/1.0、HTTP/1.1、HTTP/2</td></tr>
+        <tr><td><b>預設根物件</b></td><td>未指定（使用 Origin 預設路徑）</td></tr>
+        <tr><td><b>標準日誌記錄</b></td><td>關閉</td></tr>
+        <tr><td><b>Cookie Logging</b></td><td>關閉</td></tr>
+    </tbody>
+    </table>
+
+    <p>目前 CloudFront 對應的兩個主要 <b>Origin 來源</b> 如下：</p>
+
+    <table class="table table-sm">
+    <thead>
+        <tr><th>來源名稱</th><th>來源網域</th><th>類型</th><th>用途</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+        <td><b>kao-pwa-aws.s3.ap-northeast-1.amazonaws.com-mhpnuk2x41w</b></td>
+        <td><code>kao-pwa-aws.s3-website-ap-northeast-1.amazonaws.com</code></td>
+        <td>S3 Static Website</td>
+        <td>作為前端網站資源（HTML / CSS / JS / 圖片）來源</td>
+        </tr>
+        <tr>
+        <td><b>ec2-18-176-60-86.ap-northeast-1.compute.amazonaws.com</b></td>
+        <td><code>ec2-18-176-60-86.ap-northeast-1.compute.amazonaws.com</code></td>
+        <td>EC2 HTTP 伺服器</td>
+        <td>作為後端 Flask API 來源（Nginx 反向代理）</td>
+        </tr>
+    </tbody>
+    </table>
+
+    <p>每個來源對應一組「行為（Behaviors）」設定：</p>
+
+    <table class="table table-sm">
+    <thead>
+        <tr><th>優先序</th><th>路徑模式</th><th>對應來源</th><th>協定策略</th><th>快取策略</th><th>回應標頭策略</th></tr>
+    </thead>
+    <tbody>
+        <tr>
+        <td>0</td>
+        <td><code>/api/*</code></td>
+        <td>EC2 Flask API</td>
+        <td>Redirect HTTP → HTTPS</td>
+        <td>Managed-CachingDisabled</td>
+        <td>Managed-CORS-With-Preflight</td>
+        </tr>
+        <tr>
+        <td>1</td>
+        <td><code>*</code>（預設）</td>
+        <td>S3 Website</td>
+        <td>Redirect HTTP → HTTPS</td>
+        <td>Managed-CachingOptimized</td>
+        <td>-</td>
+        </tr>
+    </tbody>
+    </table>
+
+    <p>
+    此設定代表 CloudFront 目前同時代理兩個不同來源：
+    <ul>
+        <li><b>靜態內容（S3）</b>：提供全站 HTTPS 快取與全球分發。</li>
+        <li><b>動態 API（EC2）</b>：以 <code>/api/*</code> 路由呼叫 Flask 後端，並已關閉快取。</li>
+    </ul>
+    </p>
+
+    <hr/>
+
+    <h5 class="mt-4">🔐 安全與防護狀態</h5>
+    <ul>
+    <li>WAF（Web Application Firewall）：未啟用（可選擇新增 AWS WAF 規則集）。</li>
+    <li>Rate Limiting：未設定。</li>
+    <li>SQL Injection Protection：未設定。</li>
+    <li>地理限制（Geo Restriction）：未啟用（允許全球訪問）。</li>
+    </ul>
+
+    <p>
+    雖然目前 CloudFront 尚未啟用 <b>WAF</b> 或 <b>Rate Limiting</b> 功能，  
+    但已具備完整的 HTTPS 加密、ACM 憑證支援與跨來源（CORS）設定。  
+    未來可進一步開啟安全保護與監控功能以防範惡意流量。
+    </p>
+
+    <hr/>
+
+    <h5 class="mt-4">🌐 快取與通訊政策摘要</h5>
+    <ul>
+    <li>所有 Viewer 請求皆自動 <b>Redirect 至 HTTPS</b>。</li>
+    <li><b>/api/*</b> 路徑採 <b>CachingDisabled</b>（即時回應，適用 API）。</li>
+    <li><b>S3 預設路徑</b> 採 <b>CachingOptimized</b>（適用靜態網站）。</li>
+    <li>回應標頭含 <b>Access-Control-Allow-Origin</b> 等跨網域設定。</li>
+    </ul>
+
+    <p>
+    整體設定符合「一個 CloudFront 同時代理前後端」的最佳實踐架構，  
+    外部使用者統一訪問 <code>https://d2kenp4ywj2ej.cloudfront.net</code>  
+    即可同時取得靜態網頁與動態 API，並享有加密傳輸與全域節點加速。
+    </p>
+
+    <!-- 🔎 十二、測試階段總結與後續觀察議題（EC2 Flask × CloudFront） -->
+    <div class="section-title">🔎 十二、測試階段總結與後續觀察議題（EC2 Flask × CloudFront）</div>
+
+    <p>
+    目前整體架構已進入可正常運作的階段，  
+    CloudFront 分佈 <code>d2kenp4ywj2ej.cloudfront.net</code>  
+    已成功代理 S3 靜態網站與 EC2 Flask 後端服務。  
+    主要測試項目如下：
+    </p>
+
+    <ul>
+    <li>✅ S3 靜態網站（<code>index.html</code>、<code>/zh/Test/test.html</code>）可經由 CloudFront 以 HTTPS 開啟。</li>
+    <li>✅ EC2 Flask API（<code>/api/</code>、<code>/api/status</code>）能透過 CloudFront 成功呼叫並回傳 JSON 結果。</li>
+    <li>✅ 以 CloudFront 為入口時，整體網站流量已全部轉為 <b>HTTPS 加密</b>。</li>
+    </ul>
+
+    <p>
+    這代表 CloudFront 已成功扮演「全域 HTTPS 代理層」，  
+    並將來自使用者的加密請求轉發至 EC2 的 Flask 伺服器（HTTP）。  
+    目前推測架構如下：
+    </p>
+
+    <pre><code>🌍 Client (HTTPS)
+        │
+        ▼
+    ☁️ CloudFront (HTTPS + 憑證 + CORS)
+        │ HTTP (內部)
+        ▼
+    🏠 EC2 (Nginx → Flask)
+        │
+        ▼
+    🐍 Flask App (業務邏輯)
+    </code></pre>
+
+    <p>
+    關於 CloudFront 與 EC2 之間的實際通訊，目前可確認：
+    </p>
+
+    <ul>
+    <li>CloudFront 已直接指定 EC2 為 Origin，因此主要仍是由 EC2 上的 Nginx 接收 HTTP 請求。</li>
+    <li>CloudFront 本身不「取代」Nginx，但能「站在它前面」處理加密與協定轉換。</li>
+    <li>若 EC2 上的 Flask 服務僅開放 Port 5000（未經 Nginx），CloudFront 仍可代理該 HTTP 端口，只要網路安全群組允許。</li>
+    </ul>
+
+    <p>
+    換句話說，目前系統可能是：
+    <b>「CloudFront 代理 HTTP → EC2:Nginx → Flask」</b> 或
+    <b>「CloudFront 直接代理 HTTP → Flask」</b> 兩種模式之一。  
+    後續可透過 <code>netstat</code>、<code>curl -v</code> 與 <code>nginx access.log</code> 驗證實際連線來源。
+    </p>
+
+    <hr/>
+
+    <h5 class="mt-4">🧩 後續待確認與優化議題</h5>
+
+    <ul>
+    <li><b>① Nginx 角色定位：</b>  
+        目前推測 CloudFront 仍會透過 Nginx 接收 HTTP 請求再轉至 Flask，  
+        建議後續以 <code>access.log</code> 追蹤來源 IP（應為 CloudFront Edge 節點）。  
+    </li>
+
+    <li><b>② API 呼叫權限：</b>  
+        若未來需限制前端（S3 網頁）才能呼叫 API，可考慮：
+        <ul>
+        <li>CloudFront Viewer Request Function 驗證 Referer。</li>
+        <li>或於 Flask 加入自訂 Header 驗證（如 Token 或 Signature）。</li>
+        </ul>
+    </li>
+
+    <li><b>③ HTTPS 全鏈確認：</b>  
+        目前外部已全數 HTTPS，內部 Flask 仍為 HTTP，  
+        若資料敏感或日後擴大規模，可考慮 EC2 內部啟用 Nginx 憑證（Let’s Encrypt）。  
+    </li>
+
+    <li><b>④ S3 × CloudFront 呼叫整合：</b>  
+        現階段 S3 網頁能正常透過 HTTPS 呼叫 EC2 API，  
+        但建議長期維護時統一以 CloudFront 網域呼叫 API，以避免 CORS 混合來源錯誤。  
+    </li>
+
+    <li><b>⑤ 後續安全與控管：</b>  
+        若計畫導入使用者登入系統或權限驗證，可考慮：
+        <ul>
+        <li>整合 AWS WAF（Web Application Firewall）過濾惡意請求。</li>
+        <li>啟用 CloudFront Signed URL / Cookie 控制資源訪問。</li>
+        <li>使用 AWS IAM / Cognito 作為 API 身分管理機制。</li>
+        </ul>
+    </li>
+    </ul>
+
+    <hr/>
+
+    <h5 class="mt-4">📘 階段性結論</h5>
+    <p>
+    目前 CloudFront 已完整代理 EC2 與 S3，並成功提供 HTTPS 傳輸，  
+    前端（S3）與後端（EC2 Flask）皆能透過 CloudFront 網域 <code>d2kenp4ywj2ej.cloudfront.net</code> 互通。  
+    這代表整個系統已達到「最小可行 HTTPS 架構（MVP）」的目標。  
+    接下來的重點將轉為：
+    </p>
+    <ul>
+    <li>🧩 驗證 CloudFront ↔ EC2 間的實際連線路徑（是否經 Nginx）。</li>
+    <li>🔒 強化安全與權限控管（WAF、簽章機制、CORS Policy）。</li>
+    <li>🚦 優化前後端 API 結構與回應規格，為後續資料交換奠基。</li>
+    </ul>
+
+    <p class="text-muted mt-4">📅 更新日期：2025-11-08</p>
+  </main>
+
+  <div id="footer"></div>
+  <script src="/static/js/layout.js"></script>
+</body>
+</html>
