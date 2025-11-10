@@ -67,8 +67,8 @@
     try {
       // ✅ 兩個可用 API 通道（CloudFront 正式 / EC2 開發）
       const apiEndpoints = {
-        cloudfront: "https://d2kenp4ywj2ej.cloudfront.net/api/login",
-        ec2: "http://18.176.60.86/api/login"
+        cloudfront: "https://d2kenp4ywj2ej.cloudfront.net/api/auth/login",
+        ec2: "http://18.176.60.86/api/auth/login"
       };
 
       // 預設使用 CloudFront
@@ -79,12 +79,14 @@
       });
 
       const data = await res.json();
+      console.log("伺服器回傳：", data);
+      
+      if (res.ok && data.data && data.data.api_key) {
+        const info = data.data;
+        localStorage.setItem("api_key", info.api_key);
+        localStorage.setItem("username", info.username || info.user_id || user_id);
 
-      if (res.ok && data.api_key) {
-        localStorage.setItem("api_key", data.api_key);
-        localStorage.setItem("username", data.username || data.user_id || user_id); // 🔹 儲存使用者名稱
-
-        msgBox.textContent = `✅ 登入成功！歡迎 ${data.username || data.user_id || user_id}，即將進入主畫面...`;
+        msgBox.textContent = `✅ 登入成功！歡迎 ${info.username || info.user_id}，即將進入主畫面...`;
         msgBox.className = "mt-3 fw-bold text-success";
 
         setTimeout(() => {

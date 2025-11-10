@@ -135,20 +135,20 @@ https://d2kenp4ywj2ej.cloudfront.net/api/status
     <div id="cloudfrontAPIResult" class="result-block mt-3">🕓 尚未測試 CloudFront /api/</div>
     <div id="cloudfrontStatusResult" class="result-block mt-3">🕓 尚未測試 CloudFront /api/status</div>
 
-    <!-- 🔐 六、身分認證測試（CloudFront /api/login） -->
-    <div class="section-title">🔐 六、身分認證測試（CloudFront /api/login）</div>
+    <!-- 🔐 六、身分認證測試（CloudFront /api/auth/login） -->
+    <div class="section-title">🔐 六、身分認證測試（CloudFront /api/auth/login）</div>
 
     <!-- ✅ 測試通道說明 -->
     <pre><code>
     🌐 CloudFront Proxy（正式 HTTPS 通道）：
-    https://d2kenp4ywj2ej.cloudfront.net/api/login
+    https://d2kenp4ywj2ej.cloudfront.net/api/auth/login
 
     🧩 EC2 Public IP（開發測試通道）：
-    http://18.176.60.86/api/login
+    http://18.176.60.86/api/auth/login
 
     ⚠️ 無法使用（封鎖內部埠）：
     ❌ http://18.176.60.86:5001/login
-    ❌ http://18.176.60.86:5001/api/login
+    ❌ http://18.176.60.86:5001/api/auth/login
     </code></pre>
 
     <!-- 🧭 登入測試表單（白底） -->
@@ -176,10 +176,10 @@ https://d2kenp4ywj2ej.cloudfront.net/api/status
           <tr><th>測試項目</th><th>結果</th><th>原因</th></tr>
         </thead>
         <tbody>
-          <tr><td>https://d2kenp4ywj2ej.cloudfront.net/api/login</td><td>✅ 成功</td><td>CloudFront HTTPS 通道代理至 EC2 Nginx。</td></tr>
-          <tr><td>http://18.176.60.86/api/login</td><td>✅ 成功</td><td>EC2 Nginx 對外轉發至內部 Gunicorn (127.0.0.1:5001)。</td></tr>
+          <tr><td>https://d2kenp4ywj2ej.cloudfront.net/api/auth/login</td><td>✅ 成功</td><td>CloudFront HTTPS 通道代理至 EC2 Nginx。</td></tr>
+          <tr><td>http://18.176.60.86/api/auth/login</td><td>✅ 成功</td><td>EC2 Nginx 對外轉發至內部 Gunicorn (127.0.0.1:5001)。</td></tr>
           <tr><td>http://18.176.60.86:5001/login</td><td>❌ 失敗</td><td>Gunicorn 僅開放本機，外部封鎖此埠。</td></tr>
-          <tr><td>http://18.176.60.86:5001/api/login</td><td>❌ 失敗</td><td>同上，外網無法連接內部服務。</td></tr>
+          <tr><td>http://18.176.60.86:5001/api/auth/login</td><td>❌ 失敗</td><td>同上，外網無法連接內部服務。</td></tr>
         </tbody>
       </table>
 
@@ -216,74 +216,9 @@ https://d2kenp4ywj2ej.cloudfront.net/api/status
   <script src="/static/js/layout.js"></script>
   <script src="/static/js/api_basic.js"></script>
   <script src="/static/js/api_gunicorn.js"></script>
-  <script src="/static/js/api_login.js"></script> <!-- ✅ 新增這行 -->
+  <script src="/static/js/test_api_login.js"></script> <!-- ✅ 新增這行 -->
+  <script src="/static/js/auth_api.js"></script> <!-- ✅ 新增這行 -->
 
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const keyInput = document.getElementById("apiKeyInput");
-    const keyDisplay = document.getElementById("currentKeyDisplay");
-    const saveBtn = document.getElementById("saveKeyBtn");
-    const clearBtn = document.getElementById("clearKeyBtn");
-
-    // ✅ 自動載入登入時儲存的 api_key
-    const savedKey = localStorage.getItem("api_key");
-    updateKeyDisplay(savedKey);
-
-    if (savedKey) {
-      const username = localStorage.getItem("username") || "使用者";
-      console.log(`🔐 偵測到登入金鑰，使用者：${username}`);
-
-      // ✅ 顯示歡迎提示（插入目前金鑰下方）
-      const welcomeNote = document.createElement("div");
-      welcomeNote.innerHTML = `<b class="text-success">👋 歡迎 ${username}，API 金鑰已自動載入！</b>`;
-      keyDisplay.parentElement.appendChild(welcomeNote);
-
-      // 自動觸發「儲存金鑰」按鈕（保持同步邏輯）
-      setTimeout(() => saveBtn.click(), 300);
-    }
-
-    // ✅ 儲存金鑰
-    saveBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      const key = keyInput.value.trim();
-      const username = localStorage.getItem("username") || "使用者";
-      if (!key) return showTempMessage("⚠️ 請輸入有效的金鑰！", "danger");
-      localStorage.setItem("api_key", key);
-      updateKeyDisplay(key);
-      showTempMessage(`✅ API 金鑰已儲存！👋 Hello ${username}！`, "success");
-    });
-
-    // ✅ 清除金鑰
-    clearBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      localStorage.removeItem("api_key");
-      keyInput.value = "";
-      updateKeyDisplay(null);
-      showTempMessage("🧹 API 金鑰已清除。", "warning");
-    });
-
-    // 🧩 更新畫面顯示
-    function updateKeyDisplay(key) {
-      if (key) {
-        keyInput.value = key;
-        keyDisplay.textContent = key;
-        keyDisplay.classList.add("text-success");
-      } else {
-        keyDisplay.textContent = "（尚未設定）";
-        keyDisplay.classList.remove("text-success");
-      }
-    }
-
-    // 💬 顯示暫時提示訊息
-    function showTempMessage(msg, type = "info") {
-      const note = document.createElement("div");
-      note.innerText = msg; // 用 innerText 才能保留換行效果 (\n)
-      note.className = `fw-bold text-${type} mt-2`;
-      keyDisplay.parentElement.appendChild(note);
-      setTimeout(() => note.remove(), 2500); // 2.5 秒後消失
-    }
-  });
-  </script>
 
 </body>
 </html>

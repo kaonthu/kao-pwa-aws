@@ -25,8 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       // ✅ 目前可用的兩條路徑
       const apiEndpoints = {
-        cloudfront: "https://d2kenp4ywj2ej.cloudfront.net/api/login", // 正式 HTTPS 通道
-        ec2: "http://18.176.60.86/api/login"                          // 開發階段測試用
+        cloudfront: "https://d2kenp4ywj2ej.cloudfront.net/api/auth/login", // 正式 HTTPS 通道
+        ec2: "http://18.176.60.86/api/auth/login"                          // 開發階段測試用
       };
 
       // 預設使用 CloudFront
@@ -37,19 +37,22 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const data = await res.json();
+      console.log("伺服器回傳：", data);
 
-      if (res.ok && data.api_key) {
+      // ⚠️ 修正重點：後端回傳的 api_key 在 data.data 裡
+      if (res.ok && data.data && data.data.api_key) {
+        const info = data.data;
         resultDiv.innerHTML = `
           ✅ 登入成功！<br>
-          使用者：${data.message}<br>
-          API Key：<code>${data.api_key}</code>
+          使用者：${info.username || info.user_id}<br>
+          API Key：<code>${info.api_key}</code>
         `;
       } else {
         resultDiv.innerHTML = `❌ 登入失敗：${data.error || "未知錯誤"}`;
       }
     } catch (err) {
       console.error("登入請求錯誤：", err);
-      resultDiv.textContent = "伺服器錯誤或網路無法連線。";
+      resultDiv.textContent = "🚫 伺服器錯誤或網路無法連線。";
     }
   });
 });
