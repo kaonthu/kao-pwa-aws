@@ -1,23 +1,30 @@
 // =====================================================
-// 🧩 EC2 Gunicorn + Nginx 測試模組
+// 🔑 EC2 / CloudFront 測試模組（由 test.html 統一管理金鑰）
 // =====================================================
 
-// 端點設定
+// 🧩 1️⃣ 從 localStorage 取得目前金鑰（統一使用 api_key）
+function getUserKey() {
+  return localStorage.getItem("api_key") || "";
+}
+
+// 🧩 2️⃣ API 端點設定
 const gunicornRoot = "http://18.176.60.86/";
 const gunicornStatus = "http://18.176.60.86/status";
 const gunicornAPI = "http://18.176.60.86/api/";
 const gunicornAPIStatus = "http://18.176.60.86/api/status";
-
-// ☁️ CloudFront Proxy 測試
 const cloudfrontAPI = "https://d2kenp4ywj2ej.cloudfront.net/api/";
 const cloudfrontStatus = "https://d2kenp4ywj2ej.cloudfront.net/api/status";
 
-// 通用呼叫函式
+// 🧩 3️⃣ 共用呼叫函式（自動附上 Header）
 async function callGunicornAPI(url, targetId) {
   const box = document.getElementById(targetId);
+  const key = getUserKey();
   box.textContent = `🚀 正在呼叫：${url}`;
   try {
-    const res = await fetch(url, { mode: "cors" });
+    const res = await fetch(url, {
+      mode: "cors",
+      headers: { "X-API-KEY": key }
+    });
     const text = await res.text();
     try {
       const json = JSON.parse(text);
@@ -30,7 +37,7 @@ async function callGunicornAPI(url, targetId) {
   }
 }
 
-// 綁定所有按鈕事件
+// 🧩 4️⃣ 綁定按鈕事件
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnGunicornRoot").addEventListener("click", () => callGunicornAPI(gunicornRoot, "gunicornRootResult"));
   document.getElementById("btnGunicornStatus").addEventListener("click", () => callGunicornAPI(gunicornStatus, "gunicornStatusResult"));

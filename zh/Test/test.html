@@ -38,6 +38,34 @@
       <p class="text-muted">快速測試 Lambda、EC2、CloudFront API 的回傳結果。</p>
     </div>
 
+    <!-- 🔑 0. 使用者金鑰設定 -->
+    <div class="section-title">🔑 0. 使用者金鑰設定</div>
+    <div class="card p-3 mb-4 shadow-sm bg-white border-0">
+      <div class="mb-2">
+        <label for="apiKeyInput" class="form-label fw-bold text-dark">
+          請輸入您的 API 金鑰：
+        </label>
+        <input type="text" id="apiKeyInput" class="form-control fw-bold text-dark"
+              placeholder="例如：請到 index.html 登入帳號密碼後自動帶入 API Key">
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        <button id="saveKeyBtn" class="btn btn-success fw-bold">💾 儲存金鑰</button>
+        <button id="clearKeyBtn" class="btn btn-outline-danger fw-bold">🧹 清除金鑰</button>
+      </div>
+
+      <p class="mt-3 fw-bold text-secondary">
+        儲存後會自動保存在瀏覽器（localStorage）。所有 API 呼叫都會自動夾帶此金鑰。
+      </p>
+
+      <div class="mt-2 border-top pt-2">
+        <b class="fw-bold text-dark">目前金鑰：</b>
+        <span id="currentKeyDisplay" class="fw-bold text-success">
+          （尚未設定）
+        </span>
+      </div>
+    </div>
+
     <!-- ⚙️ 一、Lambda API 測試 -->
     <div class="section-title">⚙️ 一、Lambda API 測試</div>
     <pre><code>
@@ -107,6 +135,80 @@ https://d2kenp4ywj2ej.cloudfront.net/api/status
     <div id="cloudfrontAPIResult" class="result-block mt-3">🕓 尚未測試 CloudFront /api/</div>
     <div id="cloudfrontStatusResult" class="result-block mt-3">🕓 尚未測試 CloudFront /api/status</div>
 
+    <!-- 🔐 六、身分認證測試（CloudFront /api/login） -->
+    <div class="section-title">🔐 六、身分認證測試（CloudFront /api/login）</div>
+
+    <!-- ✅ 測試通道說明 -->
+    <pre><code>
+    🌐 CloudFront Proxy（正式 HTTPS 通道）：
+    https://d2kenp4ywj2ej.cloudfront.net/api/login
+
+    🧩 EC2 Public IP（開發測試通道）：
+    http://18.176.60.86/api/login
+
+    ⚠️ 無法使用（封鎖內部埠）：
+    ❌ http://18.176.60.86:5001/login
+    ❌ http://18.176.60.86:5001/api/login
+    </code></pre>
+
+    <!-- 🧭 登入測試表單（白底） -->
+    <div class="card p-3 mb-3 shadow-sm bg-white border-0">
+      <div class="mb-2">
+        <label for="loginUser" class="form-label fw-bold">帳號：</label>
+        <input type="text" id="loginUser" class="form-control" placeholder="輸入帳號">
+      </div>
+      <div class="mb-2">
+        <label for="loginPass" class="form-label fw-bold">密碼：</label>
+        <input type="password" id="loginPass" class="form-control" placeholder="輸入密碼">
+      </div>
+      <button id="btnLoginTest" class="btn w-100">🚀 發送登入請求</button>
+    </div>
+
+    <div id="loginResult" class="result-block mt-3">🕓 尚未測試登入 API</div>
+
+    <!-- 📘 登入架構筆記（與前面格式一致：深底＋亮字） -->
+    <div class="mt-4 p-3 rounded" style="background:#2b2b2b; color:#e9ecef;">
+      <h5 class="fw-bold text-info mb-3">🧾 補充筆記：登入路由與通道邏輯</h5>
+
+      <p class="fw-bold text-light mb-1">✅ 測試項目與結果：</p>
+      <table class="table table-sm table-bordered align-middle" style="color:#f8f9fa; background:#3b3b3b; border-color:#6c757d;">
+        <thead class="text-center" style="background:#495057;">
+          <tr><th>測試項目</th><th>結果</th><th>原因</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>https://d2kenp4ywj2ej.cloudfront.net/api/login</td><td>✅ 成功</td><td>CloudFront HTTPS 通道代理至 EC2 Nginx。</td></tr>
+          <tr><td>http://18.176.60.86/api/login</td><td>✅ 成功</td><td>EC2 Nginx 對外轉發至內部 Gunicorn (127.0.0.1:5001)。</td></tr>
+          <tr><td>http://18.176.60.86:5001/login</td><td>❌ 失敗</td><td>Gunicorn 僅開放本機，外部封鎖此埠。</td></tr>
+          <tr><td>http://18.176.60.86:5001/api/login</td><td>❌ 失敗</td><td>同上，外網無法連接內部服務。</td></tr>
+        </tbody>
+      </table>
+
+      <p class="fw-bold mt-3 mb-1 text-light">🧠 為何帶 <code>:5001</code> 會失敗：</p>
+      <pre class="p-2 rounded" style="background:#1f1f1f; color:#e9ecef; border:1px solid #444;"><code>gunicorn -w 2 -b 127.0.0.1:5001 app_gunicorn:app</code></pre>
+
+      <p class="text-light mb-2">
+        因 Gunicorn 僅監聽 <b>127.0.0.1</b>（內部回環位址），外部請求會被防火牆與 Nginx 攔截。  
+        目前 Nginx 的轉發設定如下：
+      </p>
+
+      <pre class="p-2 rounded" style="background:#1f1f1f; color:#e9ecef; border:1px solid #444;"><code>80  →  127.0.0.1:5001
+    443 →  127.0.0.1:5001</code></pre>
+
+      <p class="fw-bold text-light mb-1">因此外部必須透過：</p>
+      <ul class="mb-3" style="color:#e9ecef;">
+        <li>🌐 <b>CloudFront（HTTPS）</b> — 正式部署入口</li>
+        <li>🧩 <b>EC2 公網 IP（HTTP）</b> — 開發測試入口</li>
+      </ul>
+
+      <h6 class="fw-bold text-success">💬 結論：</h6>
+      <ul class="fw-bold" style="color:#e9ecef;">
+        <li>✅ <b>index.html</b> 登入頁保留內嵌 JS 是正確設計。</li>
+        <li>✅ <b>CloudFront</b> 為正式 HTTPS 通道，<b>EC2</b> 為開發測試通道。</li>
+        <li>✅ 不需打 <code>:5001</code>，該埠為內部私有通訊。</li>
+        <li>✅ 登入成功後自動導向 <code>/zh/Test/test.html</code>，並保存 <code>api_key</code>。</li>
+      </ul>
+    </div>
+
     <p class="text-muted mt-5">📅 更新日期：2025-11-08</p>
   </main>
 
@@ -114,6 +216,74 @@ https://d2kenp4ywj2ej.cloudfront.net/api/status
   <script src="/static/js/layout.js"></script>
   <script src="/static/js/api_basic.js"></script>
   <script src="/static/js/api_gunicorn.js"></script>
+  <script src="/static/js/api_login.js"></script> <!-- ✅ 新增這行 -->
+
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const keyInput = document.getElementById("apiKeyInput");
+    const keyDisplay = document.getElementById("currentKeyDisplay");
+    const saveBtn = document.getElementById("saveKeyBtn");
+    const clearBtn = document.getElementById("clearKeyBtn");
+
+    // ✅ 自動載入登入時儲存的 api_key
+    const savedKey = localStorage.getItem("api_key");
+    updateKeyDisplay(savedKey);
+
+    if (savedKey) {
+      const username = localStorage.getItem("username") || "使用者";
+      console.log(`🔐 偵測到登入金鑰，使用者：${username}`);
+
+      // ✅ 顯示歡迎提示（插入目前金鑰下方）
+      const welcomeNote = document.createElement("div");
+      welcomeNote.innerHTML = `<b class="text-success">👋 歡迎 ${username}，API 金鑰已自動載入！</b>`;
+      keyDisplay.parentElement.appendChild(welcomeNote);
+
+      // 自動觸發「儲存金鑰」按鈕（保持同步邏輯）
+      setTimeout(() => saveBtn.click(), 300);
+    }
+
+    // ✅ 儲存金鑰
+    saveBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const key = keyInput.value.trim();
+      const username = localStorage.getItem("username") || "使用者";
+      if (!key) return showTempMessage("⚠️ 請輸入有效的金鑰！", "danger");
+      localStorage.setItem("api_key", key);
+      updateKeyDisplay(key);
+      showTempMessage(`✅ API 金鑰已儲存！👋 Hello ${username}！`, "success");
+    });
+
+    // ✅ 清除金鑰
+    clearBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      localStorage.removeItem("api_key");
+      keyInput.value = "";
+      updateKeyDisplay(null);
+      showTempMessage("🧹 API 金鑰已清除。", "warning");
+    });
+
+    // 🧩 更新畫面顯示
+    function updateKeyDisplay(key) {
+      if (key) {
+        keyInput.value = key;
+        keyDisplay.textContent = key;
+        keyDisplay.classList.add("text-success");
+      } else {
+        keyDisplay.textContent = "（尚未設定）";
+        keyDisplay.classList.remove("text-success");
+      }
+    }
+
+    // 💬 顯示暫時提示訊息
+    function showTempMessage(msg, type = "info") {
+      const note = document.createElement("div");
+      note.innerText = msg; // 用 innerText 才能保留換行效果 (\n)
+      note.className = `fw-bold text-${type} mt-2`;
+      keyDisplay.parentElement.appendChild(note);
+      setTimeout(() => note.remove(), 2500); // 2.5 秒後消失
+    }
+  });
+  </script>
 
 </body>
 </html>

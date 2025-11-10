@@ -24,20 +24,19 @@
     <div class="login-box animate__animated animate__fadeInDown">
       <h2 class="mb-4">登入 ISWT 系統測試</h2>
 
-      <!-- ✅ 改為 /login -->
-      <form action="/login" method="post" id="login-form">
+      <form id="login-form">
         <div class="mb-3 text-start">
           <label for="user_id" class="form-label fw-bold">帳號</label>
-          <input type="text" class="form-control" id="user_id" name="user_id" required minlength="4" maxlength="20">
+          <input type="text" class="form-control" id="user_id" required minlength="4" maxlength="20">
         </div>
         <div class="mb-3 text-start">
           <label for="password" class="form-label fw-bold">密碼</label>
-          <input type="password" class="form-control" id="password" name="password" required minlength="4" maxlength="20">
+          <input type="password" class="form-control" id="password" required minlength="4" maxlength="20">
         </div>
         <button type="submit" class="btn btn-primary w-100 mt-3">登入</button>
 
         <!-- 🔸 顯示錯誤訊息用 -->
-        <div id="login-message" class="mt-3 text-danger fw-bold"></div>
+        <div id="login-message" class="mt-3 fw-bold"></div>
       </form>
     </div>
   </main>
@@ -47,5 +46,61 @@
 
   <!-- JS -->
   <script src="/static/js/layout.js"></script>
+
+  <script>
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const user_id = document.getElementById("user_id").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const msgBox = document.getElementById("login-message");
+
+    if (!user_id || !password) {
+      msgBox.textContent = "⚠️ 請輸入帳號與密碼。";
+      msgBox.className = "mt-3 fw-bold text-danger";
+      return;
+    }
+
+    msgBox.textContent = "登入中...";
+    msgBox.className = "mt-3 fw-bold text-secondary";
+
+    try {
+      // ✅ 兩個可用 API 通道（CloudFront 正式 / EC2 開發）
+      const apiEndpoints = {
+        cloudfront: "https://d2kenp4ywj2ej.cloudfront.net/api/login",
+        ec2: "http://18.176.60.86/api/login"
+      };
+
+      // 預設使用 CloudFront
+      const res = await fetch(apiEndpoints.cloudfront, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.api_key) {
+        localStorage.setItem("api_key", data.api_key);
+        localStorage.setItem("username", data.username || data.user_id || user_id); // 🔹 儲存使用者名稱
+
+        msgBox.textContent = `✅ 登入成功！歡迎 ${data.username || data.user_id || user_id}，即將進入主畫面...`;
+        msgBox.className = "mt-3 fw-bold text-success";
+
+        setTimeout(() => {
+          window.location.href = "/zh/Test/test.html";
+        }, 1500);
+      } else {
+        msgBox.textContent = data.error || "登入失敗，請檢查帳號或密碼。";
+        msgBox.className = "mt-3 fw-bold text-danger";
+      }
+    } catch (err) {
+      console.error("登入請求錯誤：", err);
+      msgBox.textContent = "🚫 伺服器錯誤或網路異常，請稍後再試。";
+      msgBox.className = "mt-3 fw-bold text-danger";
+    }
+  });
+  </script>
+
 </body>
 </html>

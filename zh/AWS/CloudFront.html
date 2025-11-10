@@ -324,6 +324,122 @@ curl -I https://dxxxxx.cloudfront.net/
     <li>🚦 優化前後端 API 結構與回應規格，為後續資料交換奠基。</li>
     </ul>
 
+    <!-- 🧹 十三、CloudFront 快取更新與 HTTPS 實測結果 -->
+    <div class="section-title">🧹 十三、CloudFront 快取更新與 HTTPS 實測結果</div>
+
+    <p>
+    本階段主要針對 CloudFront 快取機制與 HTTPS 請求進行測試，  
+    發現雖然 S3 的內容可即時更新，但 CloudFront 預設具備快取行為，  
+    因此新上傳的檔案不會立即反映於 CloudFront 網頁端。  
+    此行為並非異常，而是 CDN 設計使然，透過「節點快取」來提升全球訪問速度。
+    </p>
+
+    <h5 class="mt-4">📘 為何 CloudFront 不會即時更新</h5>
+    <ul>
+      <li>CloudFront 會先將 S3 的檔案快取至全球邊緣節點（Edge Locations）。</li>
+      <li>使用者再次訪問相同路徑時，會直接回傳節點快取版本（Cache Hit）。</li>
+      <li>只有當快取過期、或手動執行清除（Invalidation）時，CloudFront 才會回源更新。</li>
+      <li>因此 S3 即時更新，但 CloudFront 須透過指令或設定「快取失效」才能同步。</li>
+    </ul>
+
+    <h5 class="mt-4">⚙️ 一次性強制全站更新指令</h5>
+    <p>若要立即刷新 CloudFront 全域節點，可於 VS Code Terminal（PowerShell）執行：</p>
+    <pre><code>aws cloudfront create-invalidation --distribution-id E27AU0ZDIPO8AD --paths "/*"</code></pre>
+    <p>此指令會建立全站快取清除任務（Invalidation Request），數十秒內所有節點將重新載入 S3 新版本。</p>
+
+    <h5 class="mt-4">🔍 檢查清除任務狀態</h5>
+    <p>執行下列指令可查詢目前快取清除進度：</p>
+    <pre><code>aws cloudfront list-invalidations --distribution-id E27AU0ZDIPO8AD</code></pre>
+    <p>若輸出中顯示 <code>"Status": "Completed"</code>，代表快取更新已完成。</p>
+
+    <h5 class="mt-4">☁️ S3 同步與部署指令</h5>
+    <p>CloudFront 的來源內容仍依賴 S3，以下為目前部署與預覽的常用指令：</p>
+    <pre><code># 預覽同步差異（不修改雲端）
+aws s3 sync "C:\Users\User\Desktop\kao-pwa-aws" s3://kao-pwa-aws --delete --exclude ".git/*" --exclude ".github/*" --dryrun
+
+# 正式同步上傳
+aws s3 sync "C:\Users\User\Desktop\kao-pwa-aws" s3://kao-pwa-aws --delete --exclude ".git/*" --exclude ".github/*"
+</code></pre>
+
+    <p>同步完成後，需執行 CloudFront Invalidation 才能確保 HTTPS 網頁即時反映更新內容。</p>
+
+    <h5 class="mt-4">🧪 實際測試結果</h5>
+    <p>以下為 2025/11/08 測試各類 API 的實際結果摘要：</p>
+
+    <table class="table table-sm">
+      <thead>
+        <tr><th>項目</th><th>測試網址</th><th>結果摘要</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Lambda API</td>
+          <td>
+            <code>https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/hello</code><br/>
+            <code>https://4b5cqz0xpd.execute-api.ap-northeast-1.amazonaws.com/Prod/test</code>
+          </td>
+          <td>
+            ✅ 正常回傳：<br/>
+            {"message": "hello world"}<br/>
+            {"message": "this is a new test api"}
+          </td>
+        </tr>
+        <tr>
+          <td>公共 API</td>
+          <td><code>https://jsonplaceholder.typicode.com/todos/1</code></td>
+          <td>✅ 正常回傳測試資料。</td>
+        </tr>
+        <tr>
+          <td>EC2 Flask（Port 5000）</td>
+          <td><code>http://18.176.60.86:5000/</code></td>
+          <td>❌ 發生錯誤：TypeError: Failed to fetch（HTTP 無法被 HTTPS 前端呼叫）</td>
+        </tr>
+        <tr>
+          <td>EC2 Gunicorn + Nginx</td>
+          <td>
+            <code>http://18.176.60.86/</code><br/>
+            <code>http://18.176.60.86/status</code><br/>
+            <code>http://18.176.60.86/api/</code><br/>
+            <code>http://18.176.60.86/api/status</code>
+          </td>
+          <td>❌ 同樣因跨協定（HTTP vs HTTPS）導致請求失敗。</td>
+        </tr>
+        <tr>
+          <td>CloudFront HTTPS Proxy</td>
+          <td>
+            <code>https://d2kenp4ywj2ej.cloudfront.net/api/</code><br/>
+            <code>https://d2kenp4ywj2ej.cloudfront.net/api/status</code>
+          </td>
+          <td>
+            ✅ 成功回傳：<br/>
+            {"message": "Hello from EC2 Flask (Gunicorn version, via /api)!", "server_time": "2025-11-08 23:56:17"}<br/>
+            {"status": "running", "version": "gunicorn-demo-v1.0"}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+    由此可驗證：  
+    <ul>
+      <li>當前端（S3 網頁）為 HTTPS 時，所有非加密的 HTTP API 皆無法呼叫。</li>
+      <li>僅經 CloudFront 整合並提供 HTTPS 的 API 能正常運作。</li>
+      <li>直接輸入 CloudFront 網域（<code>d2kenp4ywj2ej.cloudfront.net</code>）會自動導向 S3 首頁，證明兩者已關聯成功。</li>
+    </ul>
+    </p>
+
+    <h5 class="mt-4">📘 結論與觀察</h5>
+    <ul>
+      <li>CloudFront 雖需手動清快取，但確保 HTTPS 網頁與 API 的整合一致性。</li>
+      <li>目前結構中，S3、EC2、Lambda 皆可透過 CloudFront 提供安全加密的入口。</li>
+      <li>後續可考慮設定 <code>Cache-Control: max-age=60</code> 等自動過期機制，減少手動 invalidation 次數。</li>
+    </ul>
+
+    <p>
+    ✅ 經過此次測試，已確定整體 HTTPS 架構可穩定運作，  
+    且 CloudFront 作為整合層已成功代理前端（S3）與後端（EC2 Flask）流量。  
+    後續可持續觀察快取行為與更新延遲，調整適當快取策略以平衡速度與即時性。
+    </p>
+
     <p class="text-muted mt-4">📅 更新日期：2025-11-08</p>
   </main>
 
